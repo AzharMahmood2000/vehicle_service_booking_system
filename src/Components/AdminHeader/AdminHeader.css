@@ -1,0 +1,357 @@
+/* ========================================
+   SHARED ADMIN HEADER
+   ======================================== */
+
+.admin-header {
+  height: 70px;
+  background-color: #1A0B2E;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 40px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 100;
+}
+
+/* Search Bar */
+.admin-header-search-bar {
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.05);
+  border-radius: 20px;
+  padding: 8px 16px;
+  width: 320px;
+}
+
+.admin-header-search-bar svg {
+  width: 18px;
+  height: 18px;
+  color: #726B7A;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.admin-header-search-bar input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+}
+
+.admin-header-search-bar input::placeholder {
+  color: #726B7A;
+}
+
+/* Header Actions */
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Icon Buttons */
+.admin-header-icon-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+}
+
+.admin-header-icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Notification Bell Container */
+.admin-header-icon-container {
+  position: relative;
+}
+
+.admin-header-notif-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  background-color: var(--primary-pink);
+  border-radius: 50%;
+  border: 1.5px solid #1A0B2E;
+}
+
+/* Notification Dropdown */
+.admin-header-notification-dropdown {
+  position: absolute;
+  top: 50px;
+  right: -80px;
+  width: 380px;
+  background-color: #2F2A38;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.admin-header-notif-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.admin-header-notif-header h4 {
+  margin: 0;
+  color: #FFFFFF;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.admin-header-mark-read-btn {
+  background: transparent;
+  border: none;
+  color: var(--primary-pink);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.admin-header-notif-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-header-notif-item {
+  display: flex;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.admin-header-notif-item:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.admin-header-notif-item:last-child {
+  border-bottom: none;
+}
+
+.admin-header-notif-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.admin-header-notif-icon svg { width: 20px; height: 20px; }
+.admin-header-notif-icon.bg-purple { background-color: #2D0A47; }
+.admin-header-notif-icon.bg-red { background-color: #AA0000; }
+.admin-header-notif-icon.bg-olive { background-color: #38382B; color: #D7CA9E; }
+
+.admin-header-notif-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.admin-header-notif-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.admin-header-notif-title {
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-header-unread-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--primary-pink);
+  border-radius: 50%;
+  margin-top: 4px;
+  box-shadow: 0 0 8px var(--primary-pink);
+}
+
+.admin-header-notif-desc {
+  color: #B0A6B9;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.admin-header-notif-time {
+  color: #726B7A;
+  font-size: 11px;
+}
+
+.admin-header-notif-footer-btn {
+  background-color: #241F2B;
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  color: #D8CFE6;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.admin-header-notif-footer-btn:hover {
+  background-color: #1F1926;
+}
+
+/* ========================================
+   PROFILE DROPDOWN
+   ======================================== */
+
+.admin-header-profile-wrapper {
+  position: relative;
+}
+
+.admin-header-profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 20px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-family: inherit;
+}
+
+.admin-header-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.admin-header-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.admin-header-user-role {
+  font-size: 9px;
+  color: #A09BA5;
+  letter-spacing: 0.5px;
+}
+
+.admin-header-user-avatar img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Profile Dropdown Panel */
+.admin-header-profile-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 240px;
+  background-color: #261f2f;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.admin-header-dropdown-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 20px 16px;
+}
+
+.admin-header-dropdown-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(157, 114, 255, 0.4);
+}
+
+.admin-header-dropdown-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 12px;
+}
+
+.admin-header-dropdown-role {
+  font-size: 11px;
+  color: #A09BA5;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+.admin-header-dropdown-divider {
+  height: 1px;
+  background-color: rgba(255,255,255,0.05);
+  margin: 0;
+}
+
+.admin-header-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 24px;
+  background: transparent;
+  border: none;
+  color: #D8CFE6;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.admin-header-dropdown-item:hover {
+  background: rgba(255,255,255,0.03);
+  color: #fff;
+}
+
+.admin-header-dropdown-item svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.admin-header-dropdown-item.logout {
+  color: #F39B9B;
+}
+
+.admin-header-dropdown-item.logout:hover {
+  background: rgba(243, 155, 155, 0.05);
+}

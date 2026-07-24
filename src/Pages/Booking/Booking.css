@@ -1,0 +1,386 @@
+/* Booking.css */
+.booking-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #200130;
+  font-family: inherit;
+}
+
+.booking-content-wrapper {
+  flex: 1;
+  width: 100%;
+  padding-top: 110px;
+  padding-bottom: 80px;
+}
+
+.booking-header-box {
+  text-align: center;
+  padding: 0 20px;
+  margin-bottom: 40px;
+}
+
+.booking-premium-badge {
+  color: #FFD700;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  display: inline-block;
+}
+
+.booking-main-title {
+  font-size: 42px;
+  font-weight: bold;
+  color: #FFFFFF;
+  margin-bottom: 12px;
+  margin-top: 0;
+}
+
+.booking-subtitle {
+  color: #8F7897;
+  font-size: 15px;
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.booking-card {
+  max-width: 500px;
+  width: 100%;
+  margin: 0 auto;
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  .booking-card {
+    width: 90%;
+    padding: 32px 24px;
+  }
+}
+
+.booking-step {
+  animation: bookingSlotFadeIn 0.4s ease-out;
+}
+
+@keyframes bookingSlotFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.step-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.step-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #120C13;
+  margin-bottom: 8px;
+  margin-top: 0;
+}
+
+.step-desc {
+  font-size: 14px;
+  color: #8F7897;
+  margin: 0;
+}
+
+.form-group {
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #120C13;
+  margin-bottom: 8px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 14px 16px;
+  background-color: #FFFFFF;
+  border: 1px solid #E5E0EA;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #120C13;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.form-input:disabled {
+  background-color: #F8F7FA;
+  cursor: not-allowed;
+  color: #8F7897;
+}
+
+.form-input:focus {
+  border-color: #FF1493;
+}
+
+.form-input::placeholder {
+  color: #8F7897;
+}
+
+.duration-info-box {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #120C13;
+  background-color: rgba(255, 20, 147, 0.05);
+  padding: 10px 14px;
+  border-radius: 6px;
+  border-left: 3px solid #FF1493;
+}
+
+.duration-info-label {
+  font-weight: 600;
+  color: #FF1493;
+}
+
+.capacity-info-box {
+  background-color: #F9F8FA;
+  border: 1px solid #E5E0EA;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.capacity-title {
+  font-size: 11px;
+  font-weight: bold;
+  color: #8F7897;
+  margin-bottom: 12px;
+  margin-top: 0;
+  letter-spacing: 0.5px;
+}
+
+.capacity-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #120C13;
+}
+
+.capacity-metric {
+  background-color: #FFFFFF;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #E5E0EA;
+}
+
+.capacity-footnote {
+  font-size: 12px;
+  color: #8F7897;
+  margin: 0;
+}
+
+.available-times-header {
+  border-bottom: 1px solid #E5E0EA;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+.available-times-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: #120C13;
+  letter-spacing: 0.3px;
+}
+
+.times-container {
+  margin-bottom: 16px;
+}
+
+.no-times-error {
+  background-color: rgba(239, 68, 68, 0.08);
+  color: #DC2626;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.times-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.time-slot {
+  background-color: #FFFFFF;
+  border: 1px solid #E5E0EA;
+  padding: 12px 10px;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.time-slot:hover {
+  border-color: #FF1493;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.time-slot.selected {
+  background-color: rgba(255, 20, 147, 0.05);
+  border-color: #FF1493;
+  box-shadow: 0 0 0 1px #FF1493;
+}
+
+.time-text {
+  font-size: 15px;
+  font-weight: bold;
+  color: #120C13;
+  margin-bottom: 6px;
+}
+
+.time-text.selected-text {
+  color: #FF1493;
+}
+
+.capacity-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.capacity-good {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #16A34A;
+}
+
+.capacity-medium {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #2563EB;
+}
+
+.capacity-low {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #D97706;
+}
+
+.success-message-box {
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: #16A34A;
+  background-color: rgba(34, 197, 94, 0.08);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.btn-primary {
+  width: 100%;
+  background-color: #FF1493;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 20, 147, 0.4);
+}
+
+.btn-change-selection {
+  background-color: transparent;
+  color: #FF1493;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 0;
+  margin-bottom: 15px;
+}
+
+.btn-change-selection:hover {
+  color: #FFFFFF; /* Or something visible, wait, on white card #FF1493 is good, hover maybe #e00a7d */
+  text-decoration: underline;
+}
+
+.error-message-box {
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #DC2626;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-with-badge {
+  position: relative;
+  width: 100%;
+}
+
+.input-badge {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #FFD700;
+  color: #000000;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  z-index: 2;
+}
+
+.input-padded {
+  padding-left: 75px; /* Added padding to offset the badge */
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+.row-item {
+  flex: 1;
+}
+
+.form-footnote {
+  text-align: center;
+  font-size: 12px;
+  color: #8F7897;
+  margin-top: 20px;
+  margin-bottom: 0;
+}
