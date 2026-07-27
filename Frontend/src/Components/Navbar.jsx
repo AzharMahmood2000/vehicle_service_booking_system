@@ -20,8 +20,7 @@ const Navbar = () => {
               { to: '/', label: 'Home' },
               { to: '/services', label: 'Services' },
               { to: '/about', label: 'About Us' },
-              { to: '/track-booking', label: 'Track Booking' },
-              { to: '/admin-login', label: 'Admin Login' }
+              { to: '/track-booking', label: 'Track Booking' }
             ].map((link, idx) => (
               <li key={idx} className="nav-item">
                 <NavLink 
