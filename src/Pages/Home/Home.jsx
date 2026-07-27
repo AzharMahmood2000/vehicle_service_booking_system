@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import ServiceDetailsModal from '../../Components/ServiceDetailsModal';
 import Navbar from '../../Components/Navbar';
@@ -98,6 +98,27 @@ const bookingSteps = [
 const Home = () => {
   const navigate = useNavigate();
   const [selectedService, setSelectedService] = useState(null);
+  const [contactData, setContactData] = useState({
+    locationName: "VehicleCare Headquarters",
+    address: "123 Engine Street, NY 10001",
+    phone: "+1 234 567 8900",
+    email: "support@vehiclecare.com",
+    supportDays: "Mon - Sun",
+    businessHours: "09:00 AM - 05:00 PM",
+    mapEmbedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d193595.1583091352!2d-74.11976373946234!3d40.69766374859258!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c24fa5d33f083b%3A0xc80b8f06e177fe62!2sNew%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2s",
+    directionsUrl: "https://maps.google.com/?q=123+Engine+Street,+NY+10001"
+  });
+
+  useEffect(() => {
+    const saved = localStorage.getItem('vehiclecare_contact_location');
+    if (saved) {
+      try {
+        setContactData(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse local contact settings", e);
+      }
+    }
+  }, []);
 
   return (
     <div className="home-container">
@@ -229,17 +250,17 @@ const Home = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Full Name</label>
-                    <input type="text" placeholder="John Doe" className="form-input" />
+                    <input type="text" placeholder="Kasun Amjana" className="form-input" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Email Address (Optional)</label>
-                    <input type="email" placeholder="john@example.com" className="form-input" />
+                    <input type="email" placeholder="kasun@example.com" className="form-input" />
                   </div>
                 </div>
                 
                 <div className="form-group">
                   <label className="form-label">Mobile Number</label>
-                  <input type="tel" placeholder="+1 (234) 567-8900" className="form-input" />
+                  <input type="tel" placeholder="074-1234567" className="form-input" />
                 </div>
                 
                 <div className="form-group">
@@ -255,22 +276,53 @@ const Home = () => {
             
             {/* Right Box (Location Map / Info) */}
             <div className="contact-map-card">
-              <div className="map-overlay-bg"></div>
-              <div className="map-overlay-gradient"></div>
+              <div className="map-iframe-container">
+                {contactData.mapEmbedUrl ? (
+                  <iframe
+                    title="VehicleCare Location"
+                    src={contactData.mapEmbedUrl}
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    allowFullScreen=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  ></iframe>
+                ) : (
+                  <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#150F19'}}>
+                    <p style={{color: '#A89CAE'}}>Map unavailable</p>
+                  </div>
+                )}
+              </div>
 
               <div className="map-info-box">
                 <div className="map-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                 </div>
                 <div className="map-text">
-                  <h4 className="map-address-title">123 Engine Street, NY 10001</h4>
-                  <p className="map-details">VehicleCare Headquarters</p>
-                  <p className="map-schedule">Support Days: Mon - Sun</p>
+                  <h4 className="map-address-title">{contactData.address}</h4>
+                  <p className="map-details">{contactData.locationName}</p>
+                  <p className="map-schedule">Support Days: {contactData.supportDays}</p>
+                  {contactData.businessHours && <p className="map-schedule" style={{marginTop: '-10px'}}>Hours: {contactData.businessHours}</p>}
                   
                   <div className="map-links">
-                    <a href="#" className="map-link-directions">Directions</a>
+                    {contactData.directionsUrl ? (
+                      <a href={contactData.directionsUrl} target="_blank" rel="noopener noreferrer" className="map-link-directions">Directions</a>
+                    ) : (
+                      <span className="map-link-directions" style={{opacity: 0.5, cursor: 'not-allowed'}}>Directions</span>
+                    )}
                     <span className="map-divider">|</span>
-                    <a href="tel:1234567890" className="map-link-call">Call Us</a>
+                    {contactData.phone ? (
+                      <a href={`tel:${contactData.phone.replace(/\s+/g, '')}`} className="map-link-call">Call Us</a>
+                    ) : (
+                      <span className="map-link-call" style={{opacity: 0.5, cursor: 'not-allowed'}}>Call Us</span>
+                    )}
+                    {contactData.email && (
+                      <>
+                        <span className="map-divider">|</span>
+                        <a href={`mailto:${contactData.email}`} className="map-link-call">Email</a>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

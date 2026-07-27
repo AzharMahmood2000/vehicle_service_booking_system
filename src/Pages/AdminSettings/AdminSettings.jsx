@@ -4,12 +4,13 @@ import AdminHeader from '../../Components/AdminHeader/AdminHeader';
 import AdminManageAboutUs from './AdminManageAboutUs';
 import AdminSecuritySettings from './AdminSecuritySettings';
 import AdminBookingRules from './AdminBookingRules';
+import AdminContactLocationSettings from './AdminContactLocationSettings';
 import './AdminSettings.css';
 
 export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState('Booking Rules');
 
-  const tabs = ['Booking Rules', 'Security', 'Manage About Us'];
+  const tabs = ['Booking Rules', 'Security', 'Manage About Us', 'Contact & Location'];
 
   return (
     <div className="admin-settings-layout">
@@ -45,6 +46,10 @@ export default function AdminSettings() {
 
           {activeTab === 'Manage About Us' && (
             <AdminManageAboutUs />
+          )}
+          
+          {activeTab === 'Contact & Location' && (
+            <AdminContactLocationSettings />
           )}
 
         </div>
