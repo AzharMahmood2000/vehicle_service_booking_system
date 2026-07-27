@@ -1,6 +1,4 @@
-/* ========================================
-   ADMIN SERVICE CATEGORIES STYLES
-   ======================================== */
+/* Admin service categories styles */
 
 .admin-categories-layout {
   display: flex;
@@ -338,9 +336,7 @@
 .footer-links span { cursor: pointer; }
 
 
-/* ========================================
-   MODAL - New Service Details
-   ======================================== */
+/* Modal - new service details */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -517,9 +513,7 @@
   opacity: 0.9;
 }
 
-/* ========================================
-   SUCCESS TOAST
-   ======================================== */
+/* Success toast */
 .success-toast {
   position: absolute;
   bottom: 40px;

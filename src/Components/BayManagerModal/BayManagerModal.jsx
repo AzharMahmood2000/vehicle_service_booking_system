@@ -3,7 +3,7 @@ import { SERVICE_BAY_STATUS } from '../../constants/serviceBayStatus';
 import { updateServiceBayStatus, addBayUnavailablePeriod } from '../../utils/serviceBayStorage';
 import { isBookingBlockingCapacity } from '../../constants/bookingStatus';
 import { updateBookingStatus, updateBookingBay } from '../../utils/bookingStorage';
-import { timeToMinutes } from '../../utils/bookingAvailability';
+import { timeToMinutes, getAvailableBays } from '../../utils/bookingAvailability';
 import './BayManagerModal.css';
 
 export default function BayManagerModal({ bays, setBays, onClose, localBookings, updateLocalBookings, showToast }) {
@@ -106,6 +106,29 @@ export default function BayManagerModal({ bays, setBays, onClose, localBookings,
     setManagingBay(null);
   };
 
+  const handleReassignBookings = () => {
+    let reassignSuccess = true;
+    for (const booking of conflictBookings) {
+      const dateBookings = localBookings.filter(lb => lb.appointmentDate === booking.appointmentDate && lb.id !== booking.id);
+      const possibleBays = getAvailableBays(booking.startTime, booking.endTime, dateBookings, booking.appointmentDate);
+      const finalBays = possibleBays.filter(pb => pb.id !== managingBay);
+      
+      if (finalBays.length > 0) {
+        updateBookingBay(booking.id, finalBays[0].id);
+      } else {
+        reassignSuccess = false;
+        showToast(`Unable to automatically reassign booking ${booking.referenceNumber}. No alternative bays available.`);
+        return; // Halt if a single reassignment fails
+      }
+    }
+    
+    if (reassignSuccess) {
+      setConflictBookings([]);
+      updateLocalBookings();
+      confirmMaintenance();
+    }
+  };
+
   return (
     <div className="bay-manager-overlay" onClick={onClose}>
       <div className="bay-manager-modal" onClick={e => e.stopPropagation()}>
@@ -195,29 +218,7 @@ export default function BayManagerModal({ bays, setBays, onClose, localBookings,
                       ))}
                     </ul>
                     <div className="conflict-actions">
-                       <button className="btn-dark" onClick={() => {
-                          import('../../utils/bookingAvailability').then(({ getAvailableBays }) => {
-                             let reassignSuccess = true;
-                             for (const b of conflictBookings) {
-                               const dateBookings = localBookings.filter(lb => lb.appointmentDate === b.appointmentDate && lb.id !== b.id);
-                               const possibleBays = getAvailableBays(b.startTime, b.endTime, dateBookings, b.appointmentDate);
-                               const finalBays = possibleBays.filter(pb => pb.id !== managingBay);
-                               
-                               if (finalBays.length > 0) {
-                                  updateBookingBay(b.id, finalBays[0].id);
-                               } else {
-                                  reassignSuccess = false;
-                                  showToast(`Unable to automatically reassign booking ${b.referenceNumber}. No alternative bays available.`);
-                                  return; // Stop processing
-                               }
-                             }
-                             if (reassignSuccess) {
-                                setConflictBookings([]);
-                                updateLocalBookings();
-                                confirmMaintenance();
-                             }
-                          });
-                       }}>Reassign Available Bookings</button>
+                       <button className="btn-dark" onClick={handleReassignBookings}>Reassign Available Bookings</button>
                        <button className="btn-outline" onClick={() => setConflictBookings([])}>Cancel Maintenance Setup</button>
                     </div>
                  </div>

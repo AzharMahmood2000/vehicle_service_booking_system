@@ -1,6 +1,4 @@
-/* ========================================
-   SHARED ADMIN HEADER
-   ======================================== */
+/* Shared admin header */
 
 .admin-header {
   height: 70px;
@@ -222,9 +220,7 @@
   background-color: #1F1926;
 }
 
-/* ========================================
-   PROFILE DROPDOWN
-   ======================================== */
+/* Profile dropdown */
 
 .admin-header-profile-wrapper {
   position: relative;

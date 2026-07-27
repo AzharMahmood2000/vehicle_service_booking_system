@@ -110,9 +110,7 @@ section {
   padding: 80px 0;
 }
 
-/* =========================================
-   COMPLEX ANIMATIONS RETAINED FOR COMPONENTS
-   ========================================= */
+/* Complex animations retained for components */
 
 /* Used by ServiceDetailsModal */
 @keyframes modalPopIn {

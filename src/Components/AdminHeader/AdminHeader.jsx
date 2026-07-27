@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getAdminProfile } from '../../utils/adminProfileStorage';
 import './AdminHeader.css';
 
 export default function AdminHeader({ searchPlaceholder = "Search vehicle or booking ID..." }) {
@@ -12,22 +13,15 @@ export default function AdminHeader({ searchPlaceholder = "Search vehicle or boo
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Fetch initial profile
   useEffect(() => {
-    import('../../utils/adminProfileStorage').then(({ getAdminProfile }) => {
-      setProfile(getAdminProfile());
-    });
+    setProfile(getAdminProfile());
   }, []);
 
-  // Close dropdowns on route change
   useEffect(() => {
     setIsProfileOpen(false);
     setIsNotifOpen(false);
     
-    // We can also passively re-fetch profile on route change to keep it fresh
-    import('../../utils/adminProfileStorage').then(({ getAdminProfile }) => {
-      setProfile(getAdminProfile());
-    });
+    setProfile(getAdminProfile());
   }, [location.pathname]);
 
   // Close dropdowns on click outside or Escape key

@@ -125,7 +125,7 @@ const Home = () => {
       <Navbar />
 
       <main>
-        {/* ================= HERO SECTION (UNCHANGED) ================= */}
+        {/* Hero section */}
         <section className="relative min-h-screen flex items-center bg-[url('/assets/images/hero-bg.jpg')] bg-no-repeat bg-center bg-cover pt-[80px]">
           <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(90deg,#0b0410_0%,rgba(11,4,16,0.85)_35%,rgba(20,8,33,0.2)_75%,transparent_100%)] z-[1] max-[992px]:bg-[linear-gradient(135deg,rgba(11,4,16,0.9)_0%,rgba(20,8,33,0.7)_100%)]"></div>
           <div className="container relative z-[2] w-full max-w-[1200px] mx-auto px-5 flex items-center justify-between gap-[40px] max-[992px]:flex-col max-[992px]:items-start max-[992px]:justify-center">
@@ -148,7 +148,7 @@ const Home = () => {
           </div>
         </section>
 
-        {/* ================= EXPLORE THE VEHICLE ================= */}
+        {/* Explore vehicle */}
         <section className="explore-vehicle-section">
           <div className="explore-vehicle-container">
             <div className="explore-vehicle-header">
@@ -163,7 +163,7 @@ const Home = () => {
           </div>
         </section>
 
-        {/* ================= FEATURED SERVICES ================= */}
+        {/* Featured services */}
         <section className="featured-services" id="services">
           <div className="featured-services-container">
             <h2 className="featured-services-title">Featured Services</h2>
@@ -202,7 +202,7 @@ const Home = () => {
           />
         </section>
 
-        {/* ================= HOW BOOKING WORKS ================= */}
+        {/* How booking works */}
         <section className="how-booking-works">
           <div className="booking-works-container">
             <div className="booking-works-header">
@@ -238,11 +238,11 @@ const Home = () => {
           </div>
         </section>
 
-        {/* ================= GET IN TOUCH ================= */}
+        {/* Get in touch */}
         <section className="get-in-touch-section">
           <div className="get-in-touch-container">
             
-            {/* Left Box (Contact Form) */}
+            {/* Contact form */}
             <div className="contact-form-card">
               <h2 className="contact-form-title">Get In Touch</h2>
               
@@ -274,7 +274,7 @@ const Home = () => {
               </form>
             </div>
             
-            {/* Right Box (Location Map / Info) */}
+            {/* Location map and info */}
             <div className="contact-map-card">
               <div className="map-iframe-container">
                 {contactData.mapEmbedUrl ? (
@@ -333,7 +333,7 @@ const Home = () => {
 
       </main>
 
-      {/* ================= FOOTER ================= */}
+      {/* Footer */}
       <Footer />
 
     </div>

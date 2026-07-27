@@ -140,9 +140,7 @@
   height: 18px;
 }
 
-/* =========================================
-   GLOBAL MODAL (New Booking)
-   ========================================= */
+/* Global modal (new booking) */
 .global-modal-overlay {
   position: fixed;
   inset: 0;

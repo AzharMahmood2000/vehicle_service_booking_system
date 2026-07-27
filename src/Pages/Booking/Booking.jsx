@@ -161,18 +161,24 @@ export default function Booking() {
     navigate('/booking-success', { state: { booking: newBooking } });
   };
 
-  const durationLabel = formData.serviceType 
-    ? `${getServiceDuration(formData.serviceType) / 60} Hour${getServiceDuration(formData.serviceType) > 60 ? 's' : ''}` 
-    : "";
+  let durationLabel = "";
+  if (formData.serviceType) {
+    const durationMins = getServiceDuration(formData.serviceType);
+    const durationHours = durationMins / 60;
+    const suffix = durationMins > 60 ? "s" : "";
+    durationLabel = `${durationHours} Hour${suffix}`;
+  }
 
   const isFullyBookedDate = formData.serviceType && formData.preferredDate && availableTimes.length === 0;
   
   const totalCapacityHours = 32;
-  const bookedCapacityHours = formData.preferredDate && allBookings
-    ? allBookings
-        .filter(b => b.appointmentDate === formData.preferredDate)
-        .reduce((sum, b) => sum + (b.estimatedDuration || 0) / 60, 0)
-    : 0;
+  let bookedCapacityHours = 0;
+  
+  if (formData.preferredDate && allBookings) {
+    bookedCapacityHours = allBookings
+      .filter(booking => booking.appointmentDate === formData.preferredDate)
+      .reduce((sum, booking) => sum + (booking.estimatedDuration || 0) / 60, 0);
+  }
   const availableCapacityHours = Math.max(0, totalCapacityHours - bookedCapacityHours);
 
   return (

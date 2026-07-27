@@ -1,6 +1,4 @@
-/* ========================================
-   ADMIN CONTACT REQUESTS STYLES
-   ======================================== */
+/* Admin contact requests styles */
 
 .admin-requests-layout {
   display: flex;
@@ -397,9 +395,7 @@
   margin-top: auto;
 }
 
-/* ========================================
-   MODAL OVERLAY (Centered)
-   ======================================== */
+/* Modal overlay (centered) */
 .contact-request-overlay {
   position: fixed;
   inset: 0;

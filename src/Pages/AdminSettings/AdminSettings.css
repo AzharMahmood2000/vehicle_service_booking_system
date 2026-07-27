@@ -1,6 +1,4 @@
-/* ========================================
-   ADMIN SETTINGS STYLES
-   ======================================== */
+/* Admin settings styles */
 
 .admin-settings-layout {
   display: flex;
@@ -185,9 +183,7 @@
   z-index: 100;
 }
 
-/* ========================================
-   MANAGE ABOUT US SECTION
-   ======================================== */
+/* Manage about us section */
 .manage-about-container {
   display: flex;
   flex-direction: column;

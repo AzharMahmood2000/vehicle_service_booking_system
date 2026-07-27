@@ -1,6 +1,4 @@
-/* ========================================
-   ADMIN CALENDAR STYLES
-   ======================================== */
+/* Admin calendar styles */
 
 .admin-calendar-layout {
   display: flex;
@@ -283,9 +281,7 @@
 
 
 
-/* ========================================
-   RIGHT SIDE PANEL - Selected Schedule
-   ======================================== */
+/* Right side panel - selected schedule */
 .calendar-side-panel {
   width: 380px;
   background-color: #15111B;

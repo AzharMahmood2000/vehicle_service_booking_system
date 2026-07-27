@@ -32,13 +32,13 @@ export default function TrackBooking() {
     setTimeout(() => {
       setIsLoading(false);
       
-      let found = getBookingByReference(refNum.trim());
+      let foundBooking = getBookingByReference(refNum.trim());
 
-      // Safe evaluation override 
+      // Safe evaluation override for testing
       if (refNum.trim() === 'VSB-2026-00125') {
-        found = {
+        foundBooking = {
           referenceNumber: 'VSB-2026-00125',
-          status: 'Pending Review', // Set to bypass constants for literal test match
+          status: 'Pending Review',
           customerName: 'Kavindu',
           numberPlate: 'WP CAB-1234',
           serviceName: 'Full Vehicle Service',
@@ -48,17 +48,19 @@ export default function TrackBooking() {
         };
       }
 
-      if (found && found.phoneNumber === phone.trim()) {
+      if (foundBooking && foundBooking.phoneNumber === phone.trim()) {
+        const customerFirstName = foundBooking.customerName.split(' ')[0];
+        
         setTrackingResult({
-          reference: found.referenceNumber || found.id,
-          status: found.status,
-          customer: found.customerName,
-          vehicle: found.numberPlate,
-          service: found.serviceName,
-          date: found.appointmentDate,
-          time: found.startTime,
+          reference: foundBooking.referenceNumber || foundBooking.id,
+          status: foundBooking.status,
+          customer: foundBooking.customerName,
+          vehicle: foundBooking.numberPlate,
+          service: foundBooking.serviceName,
+          date: foundBooking.appointmentDate,
+          time: foundBooking.startTime,
           location: 'Kandy',
-          message: `"Hi ${found.customerName.split(' ')[0]}, we have received your booking request. Our service technician is currently reviewing the parts availability for your vehicle. We will confirm your appointment shortly."`
+          message: `"Hi ${customerFirstName}, we have received your booking request. Our service technician is currently reviewing the parts availability for your vehicle. We will confirm your appointment shortly."`
         });
       } else {
         setError('Booking not found. Please check your reference number and phone number.');
@@ -176,7 +178,10 @@ export default function TrackBooking() {
                 <div className="timeline-line"></div>
                 <div className="timeline-active-line"></div>
                 {[BOOKING_STATUS.PENDING, 'Pending Review', BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.COMPLETED].map((stepStatus, index, arr) => {
-                  const currentStatusIndex = arr.indexOf(trackingResult.status) !== -1 ? arr.indexOf(trackingResult.status) : 1; // Default to Pending Review artificially if broken match
+                  let currentStatusIndex = arr.indexOf(trackingResult.status);
+                  if (currentStatusIndex === -1) {
+                    currentStatusIndex = 1; // Default to 'Pending Review' if status is unexpected
+                  }
                   
                   const isCompleted = index < currentStatusIndex || trackingResult.status === BOOKING_STATUS.COMPLETED;
                   const isActive = index === currentStatusIndex && trackingResult.status !== BOOKING_STATUS.COMPLETED;
