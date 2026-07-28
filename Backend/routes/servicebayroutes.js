@@ -5,10 +5,15 @@ const {
   updateServiceBayStatus,
 } = require("../controller/servicebaycontroller");
 
+const {
+  protect,
+} = require("../middleware/authmiddleware");
+
 const router = express.Router();
 
-router.get("/", getServiceBays);
+// Admin protected routes
+router.get("/", protect, getServiceBays);
 
-router.put("/:id/status", updateServiceBayStatus);
+router.put("/:id/status", protect, updateServiceBayStatus);
 
 module.exports = router;

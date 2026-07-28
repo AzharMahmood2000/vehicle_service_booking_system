@@ -14,6 +14,14 @@ const {
   generateBookingReference,
 } = require("../utils/bookingreference");
 
+const {
+  getBookingRules,
+} = require("../utils/bookingsettings");
+
+const {
+  isClosedDay,
+} = require("../utils/bookingday");
+
 const getBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
@@ -47,7 +55,6 @@ const createBooking = async (req, res) => {
       startTime,
     } = req.body;
 
-    // Check required fields
     if (
       !customerName ||
       !phoneNumber ||
@@ -63,7 +70,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Validate date format
     const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
     if (!datePattern.test(appointmentDate)) {
@@ -73,7 +79,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Validate time format
     const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
     if (!timePattern.test(startTime)) {
@@ -83,17 +88,37 @@ const createBooking = async (req, res) => {
       });
     }
 
-    const startMinutes = timeToMinutes(startTime);
+    // Get booking rules from MongoDB settings
+    const bookingRules = await getBookingRules();
 
-    // Only allow 30-minute intervals
-    if (startMinutes % 30 !== 0) {
+    // Check whether the selected day is closed
+    if (
+      isClosedDay(
+        appointmentDate,
+        bookingRules.closedDays
+      )
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Booking time must use 30-minute intervals",
+        message: "Bookings are not available on this closed day",
       });
     }
 
-    // Find selected active service
+    const startMinutes = timeToMinutes(startTime);
+    const openingTime = timeToMinutes(bookingRules.openingTime);
+    const closingTime = timeToMinutes(bookingRules.closingTime);
+
+    // Validate booking interval based on configured opening time
+    if (
+      startMinutes < openingTime ||
+      (startMinutes - openingTime) % bookingRules.slotIntervalMins !== 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Booking time must use ${bookingRules.slotIntervalMins}-minute intervals`,
+      });
+    }
+
     const service = await ServiceCategory.findOne({
       _id: serviceId,
       active: true,
@@ -106,17 +131,14 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Calculate booking end time using service duration
     const endTime = calculateEndTime(
       startTime,
       service.durationMins
     );
 
-    const openingTime = timeToMinutes("09:00");
-    const closingTime = timeToMinutes("17:00");
     const endMinutes = timeToMinutes(endTime);
 
-    // Working hours validation
+    // Validate dynamic working hours
     if (
       startMinutes < openingTime ||
       startMinutes >= closingTime ||
@@ -124,12 +146,10 @@ const createBooking = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Booking must be within working hours from 09:00 to 17:00",
+        message: `Booking must be within working hours from ${bookingRules.openingTime} to ${bookingRules.closingTime}`,
       });
     }
 
-    // Find a free AVAILABLE service bay
     const availableBay = await findAvailableBay(
       appointmentDate,
       startTime,
@@ -144,7 +164,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Generate unique booking reference
     let referenceNumber;
     let referenceExists = true;
 
@@ -156,7 +175,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Create booking
     const booking = await Booking.create({
       referenceNumber,
       customerName,
@@ -173,7 +191,6 @@ const createBooking = async (req, res) => {
       status: "REQUEST PENDING",
     });
 
-    // Return service and bay details
     await booking.populate(
       "serviceId",
       "title durationMins price"
@@ -264,8 +281,44 @@ const updateBookingStatus = async (req, res) => {
   }
 };
 
+const trackBooking = async (req, res) => {
+  try {
+    const { identifier } = req.params;
+
+    const bookings = await Booking.find({
+      $or: [
+        { referenceNumber: identifier },
+        { phoneNumber: identifier },
+      ],
+    })
+      .populate("serviceId", "title durationMins price")
+      .populate("serviceBay", "name status")
+      .sort({ createdAt: -1 });
+
+    if (bookings.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No booking found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      count: bookings.length,
+      bookings,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to track booking",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getBookings,
   createBooking,
   updateBookingStatus,
+  trackBooking,
 };

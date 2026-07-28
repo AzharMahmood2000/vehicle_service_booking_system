@@ -7,14 +7,20 @@ const {
   deleteServiceCategory,
 } = require("../controller/ServiceCategorycontroller");
 
+const {
+  protect,
+} = require("../middleware/authmiddleware");
+
 const router = express.Router();
 
+// Public route
 router.get("/", getServiceCategories);
 
-router.post("/", createServiceCategory);
+// Admin protected routes
+router.post("/", protect, createServiceCategory);
 
-router.put("/:id", updateServiceCategory);
+router.put("/:id", protect, updateServiceCategory);
 
-router.delete("/:id", deleteServiceCategory);
+router.delete("/:id", protect, deleteServiceCategory);
 
 module.exports = router;
