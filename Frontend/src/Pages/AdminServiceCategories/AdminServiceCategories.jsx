@@ -11,6 +11,7 @@ const mockCategories = [
     description: 'Complete 120-point inspection covering engine, transmission,...',
     duration: '120 mins',
     price: 'Rs 25000.00',
+    category: 'Maintenance',
     tag: 'PREMIUM CARE',
     image: '/assets/images/oil-change.jpg',
     active: true,
@@ -22,6 +23,7 @@ const mockCategories = [
     description: 'High-precision sensor calibration and ECU mapping to optimize fuel...',
     duration: '45 mins',
     price: 'Rs 45000.00',
+    category: 'Diagnostics',
     tag: 'PERFORMANCE',
     image: '/assets/images/engine-diagnostics.jpg',
     active: true,
@@ -33,6 +35,7 @@ const mockCategories = [
     description: 'Complete replacement or resurfacing of performance brake systems with...',
     duration: '90 mins',
     price: 'Rs 5500.00',
+    category: 'Repairs',
     tag: 'SAFETY',
     image: '/assets/images/brake-service.jpg',
     active: true,
@@ -43,6 +46,7 @@ const mockCategories = [
     description: '3-stage paint correction followed by ceramic coating application for...',
     duration: '360 mins',
     price: 'Rs 30000.00',
+    category: 'Maintenance',
     tag: 'OFFLINE',
     image: '/assets/images/car-wash.jpg',
     active: false,
@@ -56,7 +60,6 @@ export default function AdminServiceCategories() {
   const [toastMode, setToastMode] = useState('create');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingServiceId, setDeletingServiceId] = useState(null);
-
   const [editingServiceId, setEditingServiceId] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -64,6 +67,7 @@ export default function AdminServiceCategories() {
     description: '',
     duration: '',
     price: '',
+    category: 'Maintenance',
     image: '',
     active: true
   });
@@ -107,10 +111,11 @@ export default function AdminServiceCategories() {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
           })}`,
+          category: service.category || 'Maintenance',
           tag:
             service.tag ||
             service.category?.toUpperCase() ||
-            'GENERAL',
+            'MAINTENANCE',
           image:
             service.image ||
             '/assets/images/oil-change.jpg',
@@ -129,7 +134,6 @@ export default function AdminServiceCategories() {
     fetchServiceCategories();
   }, []);
 
-  // Active / Inactive toggle connected to backend
   const handleToggle = async (id) => {
     try {
       const token =
@@ -198,6 +202,7 @@ export default function AdminServiceCategories() {
       description: '',
       duration: '',
       price: '',
+      category: 'Maintenance',
       image: '',
       active: true
     });
@@ -213,6 +218,7 @@ export default function AdminServiceCategories() {
       description: service.description,
       duration: service.duration.replace(/\D/g, ''),
       price: service.price.replace(/[^\d.]/g, ''),
+      category: service.category || 'Maintenance',
       image: service.image,
       active: service.active
     });
@@ -224,59 +230,171 @@ export default function AdminServiceCategories() {
     setIsModalOpen(false);
   };
 
-  const handleCreateOrUpdateService = (e) => {
+  const handleCreateOrUpdateService = async (e) => {
     e.preventDefault();
 
+    const token =
+      localStorage.getItem('vehiclecare_admin_token') ||
+      sessionStorage.getItem('vehiclecare_admin_token');
+
+    if (!token) {
+      console.error('Admin token not found');
+      return;
+    }
+
     if (editingServiceId !== null) {
-      setCategories(
-        categories.map((cat) =>
-          cat.id === editingServiceId
-            ? {
-                ...cat,
-                title: formData.title,
-                description: formData.description,
-                duration: `${formData.duration} mins`,
-                price: formData.price
-                  ? `Rs ${parseFloat(formData.price).toFixed(2)}`
-                  : cat.price,
-                active: formData.active
-              }
-            : cat
-        )
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/services/${editingServiceId}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              title: formData.title.trim(),
+              description: formData.description.trim(),
+              durationMins: Number(formData.duration),
+              price: Number(formData.price),
+              category: formData.category,
+              image: formData.image,
+              active: formData.active
+            })
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.message || 'Failed to update service'
+          );
+        }
+
+        const updatedService = data.service;
+
+        setCategories((currentCategories) =>
+          currentCategories.map((service) =>
+            service.id === editingServiceId
+              ? {
+                  id: updatedService._id,
+                  title: updatedService.title,
+                  description: updatedService.description,
+                  duration: `${updatedService.durationMins} mins`,
+                  price: `Rs ${Number(
+                    updatedService.price
+                  ).toLocaleString('en-GB', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}`,
+                  category:
+                    updatedService.category ||
+                    'Maintenance',
+                  tag:
+                    updatedService.tag ||
+                    updatedService.category?.toUpperCase() ||
+                    'MAINTENANCE',
+                  image:
+                    updatedService.image ||
+                    '/assets/images/oil-change.jpg',
+                  active: updatedService.active
+                }
+              : service
+          )
+        );
+
+        setToastMode('edit');
+        setIsModalOpen(false);
+        setEditingServiceId(null);
+        setShowToast(true);
+
+        setTimeout(() => {
+          setShowToast(false);
+        }, 3000);
+      } catch (error) {
+        console.error(
+          'Failed to update service:',
+          error
+        );
+      }
+
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/services`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            title: formData.title.trim(),
+            description: formData.description.trim(),
+            durationMins: Number(formData.duration),
+            price: Number(formData.price),
+            category: formData.category,
+            image: formData.image,
+            active: formData.active
+          })
+        }
       );
 
-      setToastMode('edit');
-    } else {
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || 'Failed to create service'
+        );
+      }
+
+      const createdService = data.service;
+
       const newService = {
-        id: Date.now(),
-        title: formData.title,
-        description: formData.description,
-        duration: `${formData.duration} mins`,
-        price: `Rs ${parseFloat(
-          formData.price || 0
-        ).toFixed(2)}`,
-        tag: 'GENERAL',
+        id: createdService._id,
+        title: createdService.title,
+        description: createdService.description,
+        duration: `${createdService.durationMins} mins`,
+        price: `Rs ${Number(
+          createdService.price
+        ).toLocaleString('en-GB', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}`,
+        category:
+          createdService.category ||
+          'Maintenance',
+        tag:
+          createdService.tag ||
+          createdService.category?.toUpperCase() ||
+          'MAINTENANCE',
         image:
-          formData.image ||
+          createdService.image ||
           '/assets/images/oil-change.jpg',
-        active: formData.active
+        active: createdService.active
       };
 
-      setCategories([
-        ...categories,
-        newService
+      setCategories((currentCategories) => [
+        newService,
+        ...currentCategories
       ]);
 
       setToastMode('create');
+      setIsModalOpen(false);
+      setShowToast(true);
+
+      setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
+    } catch (error) {
+      console.error(
+        'Failed to create service:',
+        error
+      );
     }
-
-    setIsModalOpen(false);
-    setShowToast(true);
-
-    setTimeout(
-      () => setShowToast(false),
-      3000
-    );
   };
 
   const handleOpenDeleteModal = (id) => {
@@ -289,41 +407,66 @@ export default function AdminServiceCategories() {
     setDeletingServiceId(null);
   };
 
-  const handleConfirmDelete = () => {
-    const service = categories.find(
-      (c) => c.id === deletingServiceId
-    );
+  // Delete Service
+  const handleConfirmDelete = async () => {
+    try {
+      const token =
+        localStorage.getItem('vehiclecare_admin_token') ||
+        sessionStorage.getItem('vehiclecare_admin_token');
 
-    if (
-      service &&
-      service.hasLinkedBookings
-    ) {
-      setCategories(
-        categories.map((c) =>
-          c.id === deletingServiceId
-            ? { ...c, active: false }
-            : c
-        )
+      if (!token) {
+        throw new Error('Admin token not found');
+      }
+
+      if (!deletingServiceId) {
+        return;
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/services/${deletingServiceId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
       );
 
-      setToastMode('archived');
-    } else {
-      setCategories(
-        categories.filter(
-          (c) => c.id !== deletingServiceId
+      const data = await response.json();
+
+      if (response.status === 409) {
+        alert(`${data.message}\n\nYou can turn this service OFF using the toggle to hide it from the public instead.`);
+        setIsDeleteModalOpen(false);
+        setDeletingServiceId(null);
+        return;
+      }
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || 'Failed to delete service'
+        );
+      }
+
+      setCategories((currentCategories) =>
+        currentCategories.filter(
+          (service) => service.id !== deletingServiceId
         )
       );
 
       setToastMode('deleted');
+      setIsDeleteModalOpen(false);
+      setDeletingServiceId(null);
+      setShowToast(true);
+
+      setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
+    } catch (error) {
+      console.error(
+        'Failed to delete service:',
+        error
+      );
     }
-
-    setIsDeleteModalOpen(false);
-    setShowToast(true);
-
-    setTimeout(
-      () => setShowToast(false),
-      3000
-    );
   };
 
   const handleChange = (e) => {
@@ -475,9 +618,7 @@ export default function AdminServiceCategories() {
                       <button
                         className="delete-btn"
                         onClick={() =>
-                          handleOpenDeleteModal(
-                            cat.id
-                          )
+                          handleOpenDeleteModal(cat.id)
                         }
                         aria-label="Delete Service"
                       >
@@ -509,7 +650,10 @@ export default function AdminServiceCategories() {
                 </div>
 
                 <h3>Add New Service</h3>
-                <p>Expand your service portfolio</p>
+
+                <p>
+                  Expand your service portfolio
+                </p>
               </div>
             </div>
           </div>
@@ -538,9 +682,7 @@ export default function AdminServiceCategories() {
                   ? 'Service Updated Successfully'
                   : toastMode === 'create'
                     ? 'Service Added Successfully'
-                    : toastMode === 'deleted'
-                      ? 'Service Deleted Successfully'
-                      : 'Service Archived'}
+                    : 'Service Deleted Successfully'}
               </h4>
 
               <p>
@@ -548,9 +690,7 @@ export default function AdminServiceCategories() {
                   ? 'The service modifications have been saved.'
                   : toastMode === 'create'
                     ? 'Catalog has been updated with your new performance tier.'
-                    : toastMode === 'deleted'
-                      ? 'The service has been permanently removed.'
-                      : 'This service has booking history and was archived instead of permanently deleted.'}
+                    : 'The service has been permanently removed.'}
               </p>
             </div>
           </div>
@@ -626,6 +766,33 @@ export default function AdminServiceCategories() {
                   rows="4"
                   required
                 />
+              </div>
+
+              <div className="form-group">
+                <label>SERVICE CATEGORY</label>
+
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="Maintenance">
+                    Maintenance
+                  </option>
+
+                  <option value="Diagnostics">
+                    Diagnostics
+                  </option>
+
+                  <option value="Repairs">
+                    Repairs
+                  </option>
+
+                  <option value="AC & Heating">
+                    AC & Heating
+                  </option>
+                </select>
               </div>
 
               <div className="form-row">
@@ -718,6 +885,7 @@ export default function AdminServiceCategories() {
               <div className="form-group form-active-toggle">
                 <div>
                   <label>Active Status</label>
+
                   <p>
                     Make service available immediately
                   </p>

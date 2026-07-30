@@ -19,6 +19,12 @@ const serviceBaySchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    bookingLockVersion: {
+      type: Number,
+      default: 0,
+      select: false, // Internal only, hide from responses
+    },
   },
   {
     timestamps: true,

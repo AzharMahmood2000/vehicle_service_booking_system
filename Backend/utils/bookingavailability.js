@@ -15,7 +15,8 @@ const BLOCKING_STATUSES = [
 const findAvailableBay = async (
   appointmentDate,
   startTime,
-  endTime
+  endTime,
+  options = {}
 ) => {
   const availableBays = await ServiceBay.find({
     status: "AVAILABLE",
@@ -23,7 +24,7 @@ const findAvailableBay = async (
     // Use active bays only.
     // Existing bays without an active field are also treated as active.
     active: { $ne: false },
-  }).sort({
+  }, null, options).sort({
     name: 1,
   });
 
@@ -43,7 +44,7 @@ const findAvailableBay = async (
     serviceBay: {
       $in: bayIds,
     },
-  });
+  }, null, options);
 
   const existingMaintenances =
     await Maintenance.find({
@@ -52,7 +53,7 @@ const findAvailableBay = async (
       serviceBay: {
         $in: bayIds,
       },
-    });
+    }, null, options);
 
   for (const bay of availableBays) {
     const bayBookings = existingBookings.filter(

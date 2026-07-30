@@ -200,7 +200,7 @@ export default function Services() {
 
           category:
             service.category ||
-            'General',
+            'Maintenance',
 
           tag: service.tag || '',
 

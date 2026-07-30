@@ -306,6 +306,13 @@
   box-shadow: 0 4px 15px rgba(255, 20, 147, 0.4);
 }
 
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .btn-change-selection {
   background-color: transparent;
   color: #FF1493;
@@ -358,7 +365,7 @@
 }
 
 .input-padded {
-  padding-left: 75px; /* Added padding to offset the badge */
+  padding-left: 85px !important; /* Added padding and !important to offset the badge securely */
 }
 
 .form-row {

@@ -1,0 +1,317 @@
+/* BookingSuccess.css */
+.bs-page-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #200130;
+  font-family: inherit;
+}
+
+.bs-header-wrapper {
+  padding: 100px 20px 40px 20px;
+  text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bs-page-title {
+  font-size: 36px;
+  font-weight: bold;
+  color: #FFFFFF;
+  margin-bottom: 4px;
+  margin-top: 0;
+}
+
+.bs-page-subtitle {
+  color: #FFD700;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 4px;
+  display: block;
+}
+
+.bs-card {
+  max-width: 540px;
+  width: 100%;
+  margin: 0 auto 80px auto;
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.bs-card-top-icon {
+  width: 64px;
+  height: 64px;
+  background-color: #FF1493;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 15px rgba(255, 20, 147, 0.3);
+}
+
+.bs-card-top-icon svg {
+  color: #FFFFFF;
+  width: 28px;
+  height: 28px;
+}
+
+.bs-card-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #140821;
+  margin-bottom: 12px;
+  margin-top: 0;
+}
+
+.bs-status-pill {
+  font-size: 11px;
+  font-weight: bold;
+  padding: 6px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 32px;
+}
+
+.bs-status-pill.status-yellow { background-color: #FFD700; color: #200130; }
+.bs-status-pill.status-green { background-color: #16A34A; color: #FFFFFF; }
+.bs-status-pill.status-blue { background-color: #3B82F6; color: #FFFFFF; }
+.bs-status-pill.status-red { background-color: #DC2626; color: #FFFFFF; }
+.bs-status-pill.status-neutral { background-color: #6B7280; color: #FFFFFF; }
+
+.bs-ref-box {
+  width: 100%;
+  border: 1px solid rgba(255, 20, 147, 0.2);
+  background-color: rgba(255, 20, 147, 0.03);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  position: relative;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.bs-ref-label {
+  font-size: 10px;
+  color: #8F7897;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.bs-ref-number {
+  font-size: 28px;
+  font-weight: 800;
+  color: #140821;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.bs-ref-copy-btn {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: transparent;
+  border: none;
+  color: #FF1493;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bs-ref-copy-btn:hover {
+  opacity: 0.7;
+}
+
+.bs-helper-text {
+  font-size: 12px;
+  color: #8F7897;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  margin-bottom: 32px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bs-helper-text svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.bs-message {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #4A4453;
+  text-align: center;
+  margin-bottom: 40px;
+  margin-top: 0;
+}
+
+.bs-details-grid {
+  width: 100%;
+  border-top: 1px solid #E5E0EA;
+  border-bottom: 1px solid #E5E0EA;
+  padding: 24px 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 24px;
+  column-gap: 16px;
+  margin-bottom: 24px;
+}
+
+.bs-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bs-detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.bs-detail-label {
+  font-size: 10px;
+  color: #8F7897;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.bs-detail-value {
+  font-size: 14px;
+  font-weight: bold;
+  color: #140821;
+}
+
+.bs-detail-value.uppercase {
+  text-transform: uppercase;
+}
+
+.bs-print-btn {
+  background-color: transparent;
+  border: none;
+  color: #8F7897;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  margin-bottom: 40px;
+  transition: color 0.2s;
+  font-family: inherit;
+  padding: 0;
+}
+
+.bs-print-btn:hover {
+  color: #140821;
+}
+
+.bs-print-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.bs-buttons-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.bs-primary-btn {
+  width: 100%;
+  background-color: #200130;
+  color: #FFFFFF;
+  border: 1px solid #200130;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-family: inherit;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.bs-primary-btn:hover {
+  background-color: #380254;
+}
+
+.bs-secondary-btn {
+  width: 100%;
+  background-color: #FFFFFF;
+  color: #200130;
+  border: 1px solid #200130;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-family: inherit;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.bs-secondary-btn:hover {
+  background-color: #f8f8f8;
+}
+
+.bs-footnote {
+  font-size: 12px;
+  color: #A09BA5;
+  text-align: center;
+  line-height: 1.4;
+  margin: 0;
+  padding: 0 10px;
+}
+
+@media (max-width: 600px) {
+  .bs-card {
+    width: calc(100% - 32px);
+    padding: 32px 24px;
+  }
+  
+  .bs-details-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .bs-detail-item.full-width {
+    grid-column: span 1;
+  }
+}

@@ -30,13 +30,12 @@ const serviceCategorySchema = new mongoose.Schema(
     category: {
       type: String,
       enum: [
-        "General",
         "Maintenance",
         "Diagnostics",
         "Repairs",
         "AC & Heating",
       ],
-      default: "General",
+      default: "Maintenance",
       trim: true,
     },
 

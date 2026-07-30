@@ -1,82 +1,179 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../../Components/Navbar';
 import Footer from '../../Components/Footer';
-import { getServiceDuration } from '../../data/mockBookings';
-import { getBookings, saveBooking } from '../../utils/bookingStorage';
-import { getAvailableStartTimes, assignAvailableBay, formatTime12h } from '../../utils/bookingAvailability';
+import API_BASE_URL from '../../api';
 import './Booking.css';
+
+/* ───────── Display-only time formatter ───────── */
+function formatTime12h(time24) {
+  if (!time24) return '';
+  const [hStr, mStr] = time24.split(':');
+  let h = parseInt(hStr, 10);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  if (h === 0) h = 12;
+  else if (h > 12) h -= 12;
+  return `${h}:${mStr} ${suffix}`;
+}
+
+/* ───────── Duration label formatter ───────── */
+function formatDuration(mins) {
+  if (!mins) return '';
+  const hours = Math.floor(mins / 60);
+  const remaining = mins % 60;
+  if (hours === 0) return `${mins} minutes`;
+  if (remaining === 0) {
+    return `${mins} minutes / ${hours} hour${hours > 1 ? 's' : ''}`;
+  }
+  return `${mins} minutes / ${hours} hour${hours > 1 ? 's' : ''} ${remaining} minutes`;
+}
 
 export default function Booking() {
   const navigate = useNavigate();
-  
-  const [formData, setFormData] = useState({
-    serviceType: "",
-    preferredDate: "",
-    preferredTime: "",
-    endTime: "",
-    customerName: "",
-    phoneNumber: "",
-    vehicleNumber: "",
-    vehicleModel: ""
-  });
-  
-  const [errorMsg, setErrorMsg] = useState("");
-  const [availableTimes, setAvailableTimes] = useState([]);
-  const [allBookings, setAllBookings] = useState([]);
+  const location = useLocation();
 
+  /* ── Service list from backend ── */
+  const [services, setServices] = useState([]);
+  const [servicesLoading, setServicesLoading] = useState(true);
+  const [servicesError, setServicesError] = useState('');
+
+  /* ── Availability from backend ── */
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsMessage, setSlotsMessage] = useState('');
+
+  /* ── Form state ── */
+  const [formData, setFormData] = useState({
+    serviceType: '',
+    preferredDate: '',
+    preferredTime: '',
+    endTime: '',
+    customerName: '',
+    phoneNumber: '',
+    vehicleNumber: '',
+    vehicleModel: ''
+  });
+
+  const [errorMsg, setErrorMsg] = useState('');
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const part2Ref = React.useRef(null);
   const part1Ref = React.useRef(null);
 
+  /* ═══════════════════════════════════════════════
+     1. Fetch active services on mount
+     ═══════════════════════════════════════════════ */
   useEffect(() => {
-    setAllBookings(getBookings());
-    
+    const fetchServices = async () => {
+      try {
+        setServicesLoading(true);
+        setServicesError('');
+
+        const response = await fetch(`${API_BASE_URL}/services`);
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'Failed to load services');
+        }
+
+        setServices(data.services);
+
+        /* Pre-select if arriving from Services page "Book Now" */
+        const incoming = location.state?.selectedService;
+        if (incoming) {
+          const matchId = incoming.id || incoming._id;
+          const found = data.services.find(
+            (s) => s._id === matchId
+          );
+          if (found) {
+            setFormData((prev) => ({ ...prev, serviceType: found._id }));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch services:', error);
+        setServicesError(error.message || 'Could not load services. Please try again later.');
+      } finally {
+        setServicesLoading(false);
+      }
+    };
+
+    fetchServices();
+
     if (window.location.hash === '#availability' && part1Ref.current) {
       setTimeout(() => {
         part1Ref.current.scrollIntoView({ behavior: 'smooth' });
       }, 300);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ═══════════════════════════════════════════════
+     2. Fetch availability when service + date change
+     ═══════════════════════════════════════════════ */
   useEffect(() => {
-    if (formData.serviceType && formData.preferredDate) {
-      const duration = getServiceDuration(formData.serviceType);
-
-      const mappedBookings = allBookings.map(b => ({
-        date: b.appointmentDate,
-        startTime: b.startTime,
-        endTime: b.endTime,
-        bayId: b.serviceBay
-      }));
-
-      const times = getAvailableStartTimes(formData.preferredDate, duration, mappedBookings);
-      setAvailableTimes(times);
-      
-      if (formData.preferredTime && !times.find(t => t.startTime === formData.preferredTime)) {
-        setFormData(prev => ({ ...prev, preferredTime: "", endTime: "" }));
-        setShowBookingForm(false);
-      }
-    } else {
-      setAvailableTimes([]);
-      setFormData(prev => ({ ...prev, preferredTime: "", endTime: "" }));
-      setShowBookingForm(false);
+    if (!formData.serviceType || !formData.preferredDate) {
+      setAvailableSlots([]);
+      setSlotsMessage('');
+      return;
     }
-  }, [formData.serviceType, formData.preferredDate, allBookings]);
 
+    const fetchAvailability = async () => {
+      try {
+        setSlotsLoading(true);
+        setSlotsMessage('');
+        setAvailableSlots([]);
+
+        const response = await fetch(
+          `${API_BASE_URL}/availability/slots?date=${formData.preferredDate}&serviceId=${formData.serviceType}`
+        );
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'Failed to check availability');
+        }
+
+        if (data.closed) {
+          setSlotsMessage('This date is a closed day. Please choose another date.');
+          setAvailableSlots([]);
+          return;
+        }
+
+        const onlyAvailable = data.slots.filter((slot) => slot.available);
+        setAvailableSlots(onlyAvailable);
+
+        if (onlyAvailable.length === 0) {
+          setSlotsMessage('No available service times for this date. Please choose another date.');
+        }
+      } catch (error) {
+        console.error('Availability check failed:', error);
+        setSlotsMessage(error.message || 'Failed to check availability.');
+        setAvailableSlots([]);
+      } finally {
+        setSlotsLoading(false);
+      }
+    };
+
+    fetchAvailability();
+  }, [formData.serviceType, formData.preferredDate]);
+
+  /* ═══════════════════════════════════════════════
+     Handlers
+     ═══════════════════════════════════════════════ */
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (name === 'serviceType' || name === 'preferredDate') {
-      setFormData(prev => ({ ...prev, [name]: value, preferredTime: "", endTime: "" }));
+      setFormData((prev) => ({ ...prev, [name]: value, preferredTime: '', endTime: '' }));
       setShowBookingForm(false);
+      setErrorMsg('');
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
   const handleTimeSelect = (startTime, endTime) => {
-    setFormData(prev => ({ ...prev, preferredTime: startTime, endTime }));
+    setFormData((prev) => ({ ...prev, preferredTime: startTime, endTime }));
   };
 
   const handleContinueToBooking = () => {
@@ -88,103 +185,101 @@ export default function Booking() {
 
   const handleChangeSelection = () => {
     setShowBookingForm(false);
+    setErrorMsg('');
     setTimeout(() => {
       part1Ref.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
   };
 
-  const handleSubmit = (e) => {
+  /* ═══════════════════════════════════════════════
+     3. Submit booking to POST /api/bookings
+     ═══════════════════════════════════════════════ */
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.serviceType || !formData.preferredDate || !formData.preferredTime) {
-      setErrorMsg("Please select a service, date, and a valid start time.");
+      setErrorMsg('Please select a service, date, and a valid start time.');
       return;
     }
 
     if (!formData.vehicleModel.trim()) {
-      setErrorMsg("Please enter your vehicle model.");
+      setErrorMsg('Please enter your vehicle model.');
       return;
     }
 
-    const startStr = Date.now().toString();
-    const referenceNumber = `BK${startStr.slice(-8)}`;
-    const duration = getServiceDuration(formData.serviceType);
+    setErrorMsg('');
+    setIsSubmitting(true);
 
-    const mappedBookings = allBookings.map(b => ({
-      date: b.appointmentDate,
-      startTime: b.startTime,
-      endTime: b.endTime,
-      bayId: b.serviceBay
-    }));
+    try {
+      const response = await fetch(`${API_BASE_URL}/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: formData.customerName.trim(),
+          phoneNumber: formData.phoneNumber.trim(),
+          vehicleNumber: formData.vehicleNumber.trim(),
+          vehicleModel: formData.vehicleModel.trim(),
+          serviceId: formData.serviceType,
+          appointmentDate: formData.preferredDate,
+          startTime: formData.preferredTime
+        })
+      });
 
-    const dateBookings = mappedBookings.filter(b => b.date === formData.preferredDate);
-    const assignedBay = assignAvailableBay(formData.preferredTime, formData.endTime, dateBookings, formData.preferredDate);
+      const data = await response.json();
 
-    if (!assignedBay) {
-      setErrorMsg("Sorry, no bays are currently available for this time slot. Please refresh and try again.");
-      return;
+      if (response.status === 409) {
+        setErrorMsg(data.message || 'This time slot is no longer available. Please select another.');
+        setFormData((prev) => ({ ...prev, preferredTime: '', endTime: '' }));
+        setShowBookingForm(false);
+
+        /* Refresh availability so user sees updated slots */
+        const refreshRes = await fetch(
+          `${API_BASE_URL}/availability/slots?date=${formData.preferredDate}&serviceId=${formData.serviceType}`
+        );
+        const refreshData = await refreshRes.json();
+        if (refreshRes.ok && refreshData.success && !refreshData.closed) {
+          setAvailableSlots(refreshData.slots.filter((s) => s.available));
+        }
+
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to create booking');
+      }
+
+      navigate('/booking-success', {
+        state: { booking: data.booking }
+      });
+    } catch (error) {
+      console.error('Booking submission failed:', error);
+      setErrorMsg(error.message || 'Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setErrorMsg("");
-    
-    const svcNames = {
-      'oil': 'Oil Change',
-      'wash': 'Vehicle Wash',
-      'brakes': 'Brake Service',
-      'battery': 'Battery Service',
-      'alignment': 'Wheel Alignment',
-      'diagnostics': 'Engine Diagnostics',
-      'ac-service': 'AC Service',
-      'basic': 'Basic Service',
-      'full': 'Full Vehicle Service'
-    };
-
-    const newBooking = {
-      id: referenceNumber,
-      referenceNumber: referenceNumber,
-      customerName: formData.customerName,
-      phoneNumber: formData.phoneNumber,
-      serviceId: formData.serviceType,
-      serviceName: svcNames[formData.serviceType] || "General Service",
-      estimatedDuration: duration,
-      appointmentDate: formData.preferredDate,
-      startTime: formData.preferredTime,
-      endTime: formData.endTime,
-      serviceBay: assignedBay,
-      vehicleModel: formData.vehicleModel,
-      numberPlate: formData.vehicleNumber,
-      status: "REQUEST PENDING",
-      createdAt: new Date().toISOString()
-    };
-    
-    saveBooking(newBooking);
-    navigate('/booking-success', { state: { booking: newBooking } });
   };
 
-  let durationLabel = "";
-  if (formData.serviceType) {
-    const durationMins = getServiceDuration(formData.serviceType);
-    const durationHours = durationMins / 60;
-    const suffix = durationMins > 60 ? "s" : "";
-    durationLabel = `${durationHours} Hour${suffix}`;
-  }
+  /* ═══════════════════════════════════════════════
+     Derived values
+     ═══════════════════════════════════════════════ */
+  const selectedService = services.find((s) => s._id === formData.serviceType);
+  const durationLabel = selectedService ? formatDuration(selectedService.durationMins) : '';
 
-  const isFullyBookedDate = formData.serviceType && formData.preferredDate && availableTimes.length === 0;
-  
-  const totalCapacityHours = 32;
-  let bookedCapacityHours = 0;
-  
-  if (formData.preferredDate && allBookings) {
-    bookedCapacityHours = allBookings
-      .filter(booking => booking.appointmentDate === formData.preferredDate)
-      .reduce((sum, booking) => sum + (booking.estimatedDuration || 0) / 60, 0);
-  }
-  const availableCapacityHours = Math.max(0, totalCapacityHours - bookedCapacityHours);
+  const isFullyBookedDate =
+    formData.serviceType &&
+    formData.preferredDate &&
+    !slotsLoading &&
+    availableSlots.length === 0 &&
+    slotsMessage;
 
+  /* ═══════════════════════════════════════════════
+     Render
+     ═══════════════════════════════════════════════ */
   return (
     <div className="booking-page">
       <Navbar />
-      
+
       <div className="booking-content-wrapper">
         <div className="booking-header-box">
           <span className="booking-premium-badge">PREMIUM CARE</span>
@@ -193,36 +288,40 @@ export default function Booking() {
         </div>
 
         <div className="booking-card">
-        
+
           {/* PART 1: CHECK AVAILABILITY */}
           <div className="booking-step" ref={part1Ref} style={{ display: showBookingForm ? 'none' : 'block' }}>
             <div className="step-header">
               <h2 className="step-title">Part 1: Check Service Availability</h2>
               <p className="step-desc">Select your required service and preferred date to view available workshop times.</p>
             </div>
-            
+
             <div className="form-content">
               <div className="form-group">
                 <label className="form-label">Service Type</label>
-                <select 
+                <select
                   name="serviceType"
                   value={formData.serviceType}
                   onChange={handleChange}
                   required
                   className="form-input"
+                  disabled={servicesLoading}
                 >
-                  <option value="" disabled>Select service</option>
-                  <option value="oil">Oil Change</option>
-                  <option value="wash">Vehicle wash</option>
-                  <option value="brakes">Brake Service</option>
-                  <option value="battery">Battery Service</option>
-                  <option value="alignment">Wheel alignment</option>
-                  <option value="diagnostics">Engine Diagnostics</option>
-                  <option value="ac-service">AC Service</option>
-                  <option value="basic">Basic Service</option>
-                  <option value="full">Full Vehicle Service</option>
+                  <option value="" disabled>
+                    {servicesLoading ? 'Loading services...' : 'Select service'}
+                  </option>
+                  {services.map((svc) => (
+                    <option key={svc._id} value={svc._id}>
+                      {svc.title}
+                    </option>
+                  ))}
                 </select>
-                {formData.serviceType && (
+
+                {servicesError && (
+                  <div className="error-message-box" style={{ marginTop: 8 }}>⚠ {servicesError}</div>
+                )}
+
+                {selectedService && (
                   <div className="duration-info-box">
                     <strong className="duration-info-label">Estimated Service Duration:</strong> {durationLabel}
                   </div>
@@ -231,69 +330,52 @@ export default function Booking() {
 
               <div className="form-group">
                 <label className="form-label">Preferred Date</label>
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   name="preferredDate"
                   value={formData.preferredDate}
                   onChange={handleChange}
-                  min={new Date().toISOString().split('T')[0]} 
+                  min={new Date().toISOString().split('T')[0]}
                   required
                   className="form-input"
                 />
               </div>
 
               {formData.serviceType && formData.preferredDate && (
-                <div className="capacity-info-box">
-                  <h4 className="capacity-title">SELECTED DATE CAPACITY</h4>
-                  <div className="capacity-stats">
-                    <div className="capacity-metric"><strong>{totalCapacityHours}</strong> Total Capacity Hours</div>
-                    <div className="capacity-metric"><strong>{bookedCapacityHours}</strong> Hours Reserved</div>
-                    <div className="capacity-metric"><strong>{availableCapacityHours}</strong> Hours Available</div>
-                  </div>
-                  <p className="capacity-footnote">Exact available booking times depend on your selected service duration.</p>
-                </div>
-              )}
-
-              {formData.serviceType && formData.preferredDate && (
                 <>
                   <div className="available-times-header">
                     <span className="available-times-title">Available Start Times</span>
                   </div>
-                  
+
                   <div className="times-container">
-                    {isFullyBookedDate ? (
+                    {slotsLoading ? (
+                      <div className="no-times-error" style={{ color: '#8F7897', backgroundColor: 'rgba(143,120,151,0.08)', borderColor: 'rgba(143,120,151,0.2)' }}>
+                        Checking available times...
+                      </div>
+                    ) : isFullyBookedDate ? (
                       <div className="no-times-error">
-                        No available service times for this date. Please choose another date.
+                        {slotsMessage}
                       </div>
                     ) : (
                       <div className="times-grid">
-                        {availableTimes.map((slot) => {
+                        {availableSlots.map((slot) => {
                           const isSelected = formData.preferredTime === slot.startTime;
-                          let capacityClass = "capacity-good";
-                          let capacityText = `${slot.availableBaysCount} Bays Available`;
-                          
-                          if (slot.availableBaysCount === 1) {
-                            capacityClass = "capacity-low";
-                            capacityText = "Only 1 slot left";
-                          } else if (slot.availableBaysCount === 2) {
-                            capacityClass = "capacity-medium";
-                          }
 
                           return (
-                            <div 
+                            <div
                               key={slot.startTime}
                               className={`time-slot ${isSelected ? 'selected' : ''}`}
                               onClick={() => handleTimeSelect(slot.startTime, slot.endTime)}
                             >
                               <div className={`time-text ${isSelected ? 'selected-text' : ''}`}>{formatTime12h(slot.startTime)}</div>
-                              <div className={`capacity-badge ${capacityClass}`}>{capacityText}</div>
+                              <div className="capacity-badge capacity-good">Available</div>
                             </div>
                           );
                         })}
                       </div>
                     )}
                   </div>
-                  
+
                   {formData.preferredTime && (
                     <div className="success-message-box">
                       <strong>Service slot available:</strong><br/>
@@ -302,7 +384,7 @@ export default function Booking() {
                   )}
 
                   {formData.preferredTime && (
-                    <button 
+                    <button
                       type="button"
                       className="btn-primary"
                       onClick={handleContinueToBooking}
@@ -328,10 +410,10 @@ export default function Booking() {
 
               <div className="form-group">
                 <label className="form-label">Customer Name</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   name="customerName"
-                  placeholder="Sumith" 
+                  placeholder="Sumith"
                   value={formData.customerName}
                   onChange={handleChange}
                   required
@@ -341,10 +423,10 @@ export default function Booking() {
 
               <div className="form-group">
                 <label className="form-label">Phone Number</label>
-                <input 
-                  type="tel" 
+                <input
+                  type="tel"
                   name="phoneNumber"
-                  placeholder="076-1234567" 
+                  placeholder="076-1234567"
                   value={formData.phoneNumber}
                   onChange={handleChange}
                   required
@@ -356,10 +438,10 @@ export default function Booking() {
                 <label className="form-label">Vehicle Number</label>
                 <div className="input-with-badge">
                   <span className="input-badge">PLATE</span>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     name="vehicleNumber"
-                    placeholder="ABC-1234" 
+                    placeholder="ABC-1234"
                     value={formData.vehicleNumber}
                     onChange={handleChange}
                     required
@@ -370,10 +452,10 @@ export default function Booking() {
 
               <div className="form-group">
                 <label className="form-label">Vehicle Model</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   name="vehicleModel"
-                  placeholder="Enter vehicle model" 
+                  placeholder="Enter vehicle model"
                   value={formData.vehicleModel}
                   onChange={handleChange}
                   required
@@ -383,19 +465,19 @@ export default function Booking() {
 
               <div className="form-group">
                 <label className="form-label">Service Type</label>
-                <select 
+                <select
                   className="form-input"
                   disabled
                 >
-                  <option value="">{document.querySelector(`option[value="${formData.serviceType}"]`)?.innerText || formData.serviceType}</option>
+                  <option value="">{selectedService?.title || formData.serviceType}</option>
                 </select>
               </div>
 
               <div className="form-row">
                 <div className="form-group row-item">
                   <label className="form-label">Preferred Date</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={formData.preferredDate}
                     disabled
                     className="form-input"
@@ -403,8 +485,8 @@ export default function Booking() {
                 </div>
                 <div className="form-group row-item">
                   <label className="form-label">Preferred Time</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={formData.preferredTime ? `${formatTime12h(formData.preferredTime)} - ${formatTime12h(formData.endTime)}` : ''}
                     disabled
                     className="form-input"
@@ -415,10 +497,11 @@ export default function Booking() {
               <button
                 type="submit"
                 className="btn-primary btn-submit"
+                disabled={isSubmitting}
               >
-                Submit booking
+                {isSubmitting ? 'Submitting...' : 'Submit booking'}
               </button>
-              
+
               <p className="form-footnote">
                 You'll see your booking status update once the desk reviews it.
               </p>

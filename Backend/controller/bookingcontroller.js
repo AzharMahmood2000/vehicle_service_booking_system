@@ -1,5 +1,7 @@
+const mongoose = require("mongoose");
 const Booking = require("../models/booking");
 const ServiceCategory = require("../models/servicecategory");
+const ServiceBay = require("../models/servicebay");
 
 const {
   calculateEndTime,
@@ -150,46 +152,79 @@ const createBooking = async (req, res) => {
       });
     }
 
-    const availableBay = await findAvailableBay(
-      appointmentDate,
-      startTime,
-      endTime
-    );
+    let booking;
+    const session = await mongoose.startSession();
 
-    if (!availableBay) {
-      return res.status(409).json({
-        success: false,
-        message:
-          "Cannot accept booking due to many vehicles. No service bay is available for this time.",
+    try {
+      await session.withTransaction(async () => {
+        const availableBay = await findAvailableBay(
+          appointmentDate,
+          startTime,
+          endTime,
+          { session }
+        );
+
+        if (!availableBay) {
+          const error = new Error("NO_BAY_AVAILABLE");
+          error.status = 409;
+          throw error;
+        }
+
+        // Atomically lock the bay inside the transaction using bookingLockVersion
+        await ServiceBay.findByIdAndUpdate(
+          availableBay._id,
+          { $inc: { bookingLockVersion: 1 } },
+          { session, new: true }
+        );
+
+        let referenceNumber;
+        let referenceExists = true;
+
+        while (referenceExists) {
+          referenceNumber = generateBookingReference();
+
+          referenceExists = await Booking.findOne(
+            { referenceNumber },
+            { _id: 1 },
+            { session }
+          );
+        }
+
+        const newBookings = await Booking.create(
+          [
+            {
+              referenceNumber,
+              customerName,
+              phoneNumber,
+              vehicleNumber,
+              vehicleModel,
+              serviceId: service._id,
+              serviceName: service.title,
+              estimatedDuration: service.durationMins,
+              appointmentDate,
+              startTime,
+              endTime,
+              serviceBay: availableBay._id,
+              status: "REQUEST PENDING",
+            },
+          ],
+          { session }
+        );
+
+        booking = newBookings[0];
       });
+    } catch (error) {
+      if (error.message === "NO_BAY_AVAILABLE" || error.status === 409) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "Cannot accept booking due to many vehicles. No service bay is available for this time.",
+        });
+      }
+      throw error;
+    } finally {
+      await session.endSession();
     }
-
-    let referenceNumber;
-    let referenceExists = true;
-
-    while (referenceExists) {
-      referenceNumber = generateBookingReference();
-
-      referenceExists = await Booking.exists({
-        referenceNumber,
-      });
-    }
-
-    const booking = await Booking.create({
-      referenceNumber,
-      customerName,
-      phoneNumber,
-      vehicleNumber,
-      vehicleModel,
-      serviceId: service._id,
-      serviceName: service.title,
-      estimatedDuration: service.durationMins,
-      appointmentDate,
-      startTime,
-      endTime,
-      serviceBay: availableBay._id,
-      status: "REQUEST PENDING",
-    });
 
     await booking.populate(
       "serviceId",
