@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
   getServiceCategories,
+  getAllServiceCategories,
   createServiceCategory,
   updateServiceCategory,
   deleteServiceCategory,
@@ -16,11 +17,30 @@ const router = express.Router();
 // Public route
 router.get("/", getServiceCategories);
 
+// Admin protected route - active + inactive services
+router.get(
+  "/admin/all",
+  protect,
+  getAllServiceCategories
+);
+
 // Admin protected routes
-router.post("/", protect, createServiceCategory);
+router.post(
+  "/",
+  protect,
+  createServiceCategory
+);
 
-router.put("/:id", protect, updateServiceCategory);
+router.put(
+  "/:id",
+  protect,
+  updateServiceCategory
+);
 
-router.delete("/:id", protect, deleteServiceCategory);
+router.delete(
+  "/:id",
+  protect,
+  deleteServiceCategory
+);
 
 module.exports = router;

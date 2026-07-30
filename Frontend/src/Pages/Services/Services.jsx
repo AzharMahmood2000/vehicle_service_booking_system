@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../Components/Navbar';
 import Footer from '../../Components/Footer';
 import ServiceDetailsModal from '../../Components/ServiceDetailsModal';
+import API_BASE_URL from '../../api';
 import './Services.css';
 
 const allServices = [
@@ -15,7 +16,14 @@ const allServices = [
     price: 'Rs. 25,000',
     image: '/assets/images/car-wash.jpg',
     category: 'Maintenance',
-    features: ['Complete engine check', 'Transmission flush', 'Differential fluid change', 'Brake pad replacement check', 'Advanced diagnostics', 'Paint protection']
+    features: [
+      'Complete engine check',
+      'Transmission flush',
+      'Differential fluid change',
+      'Brake pad replacement check',
+      'Advanced diagnostics',
+      'Paint protection'
+    ]
   },
   {
     id: 2,
@@ -26,7 +34,14 @@ const allServices = [
     price: 'Rs. 18,000',
     image: '/assets/images/engine-diagnostics.jpg',
     category: 'Diagnostics',
-    features: ['Full system scan', 'Code retrieval', 'Live data analysis', 'Engine performance check', 'Emission testing', 'Repair estimate']
+    features: [
+      'Full system scan',
+      'Code retrieval',
+      'Live data analysis',
+      'Engine performance check',
+      'Emission testing',
+      'Repair estimate'
+    ]
   },
   {
     id: 3,
@@ -37,7 +52,14 @@ const allServices = [
     price: 'Rs. 9,500',
     image: '/assets/images/oil-change.jpg',
     category: 'Maintenance',
-    features: ['Engine oil change', 'Oil filter replacement', 'Fluid level check', 'Tire pressure check', 'Basic undercarriage inspection', 'Leak check']
+    features: [
+      'Engine oil change',
+      'Oil filter replacement',
+      'Fluid level check',
+      'Tire pressure check',
+      'Basic undercarriage inspection',
+      'Leak check'
+    ]
   },
   {
     id: 4,
@@ -48,7 +70,14 @@ const allServices = [
     price: 'Rs. 15,000',
     image: '/assets/images/brake-service.jpg',
     category: 'Repairs',
-    features: ['Brake pad inspection', 'Rotor evaluation', 'Brake fluid top-up', 'Caliper functionality check', 'Line inspection', 'Road test']
+    features: [
+      'Brake pad inspection',
+      'Rotor evaluation',
+      'Brake fluid top-up',
+      'Caliper functionality check',
+      'Line inspection',
+      'Road test'
+    ]
   },
   {
     id: 5,
@@ -59,7 +88,14 @@ const allServices = [
     price: 'Rs. 3,500',
     image: '/assets/images/battery-service.jpg',
     category: 'Maintenance',
-    features: ['Voltage testing', 'Terminal cleaning', 'Cable inspection', 'Battery health report', 'Alternator check', 'Secure mounting']
+    features: [
+      'Voltage testing',
+      'Terminal cleaning',
+      'Cable inspection',
+      'Battery health report',
+      'Alternator check',
+      'Secure mounting'
+    ]
   },
   {
     id: 6,
@@ -70,7 +106,14 @@ const allServices = [
     price: 'Rs. 8,000',
     image: '/assets/images/wheel-alignment.jpg',
     category: 'Repairs',
-    features: ['Computerized alignment', 'Camber & caster check', 'Toe adjustment', 'Suspension inspection', 'Steering wheel centering', 'Test drive verification']
+    features: [
+      'Computerized alignment',
+      'Camber & caster check',
+      'Toe adjustment',
+      'Suspension inspection',
+      'Steering wheel centering',
+      'Test drive verification'
+    ]
   },
   {
     id: 7,
@@ -81,7 +124,14 @@ const allServices = [
     price: 'Rs. 12,500',
     image: '/assets/images/hero-bg.jpg',
     category: 'AC & Heating',
-    features: ['Refrigerant leak text', 'Compressor belt check', 'Evaporator cleaning', 'Ventilation sanitization', 'Cabin filter change', 'Thermostat testing']
+    features: [
+      'Refrigerant leak test',
+      'Compressor belt check',
+      'Evaporator cleaning',
+      'Ventilation sanitization',
+      'Cabin filter change',
+      'Thermostat testing'
+    ]
   },
   {
     id: 8,
@@ -92,51 +142,147 @@ const allServices = [
     price: 'Rs. 5,000',
     image: '/assets/images/hero-red-car.jpg',
     category: 'Repairs',
-    features: ['Wheel balancing', 'Tyre rotation', 'Tread depth analysis', 'Puncture check', 'Air pressure calibration', 'Rim inspection']
+    features: [
+      'Wheel balancing',
+      'Tyre rotation',
+      'Tread depth analysis',
+      'Puncture check',
+      'Air pressure calibration',
+      'Rim inspection'
+    ]
   }
 ];
 
 export default function Services() {
   const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState('All Services');
   const [search, setSearch] = useState('');
   const [selectedService, setSelectedService] = useState(null);
 
-  const tabs = ['All Services', 'Maintenance', 'Diagnostics', 'Repairs', 'AC & Heating'];
+  // Keep mock services as fallback if backend cannot be reached
+  const [services, setServices] = useState(allServices);
 
-  const filteredServices = allServices.filter(s => {
-    const matchesTab = activeTab === 'All Services' || s.category === activeTab;
-    const matchesSearch = s.title.toLowerCase().includes(search.toLowerCase());
+  const tabs = [
+    'All Services',
+    'Maintenance',
+    'Diagnostics',
+    'Repairs',
+    'AC & Heating'
+  ];
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/services`);
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.message || 'Failed to load services'
+          );
+        }
+
+        const formattedServices = data.services.map((service) => ({
+          id: service._id,
+          title: service.title,
+          description: service.description,
+
+          duration: `${service.durationMins} Mins`,
+
+          price: `Rs. ${Number(
+            service.price
+          ).toLocaleString('en-GB')}`,
+
+          image:
+            service.image ||
+            '/assets/images/oil-change.jpg',
+
+          category:
+            service.category ||
+            'General',
+
+          tag: service.tag || '',
+
+          active: service.active
+        }));
+
+        setServices(formattedServices);
+      } catch (error) {
+        console.error(
+          'Failed to fetch services:',
+          error
+        );
+      }
+    };
+
+    fetchServices();
+  }, []);
+
+  const filteredServices = services.filter((service) => {
+    const matchesTab =
+      activeTab === 'All Services' ||
+      service.category === activeTab;
+
+    const matchesSearch =
+      service.title
+        .toLowerCase()
+        .includes(search.toLowerCase());
+
     return matchesTab && matchesSearch;
   });
 
   return (
     <div className="services-page">
       <Navbar />
-      
+
       <div className="services-header-container">
-        <h1 className="services-title">Our Vehicle Services</h1>
-        <p className="services-subtitle">Professional maintenance and repair solutions designed to keep your vehicle safe, reliable, and performing at its best.</p>
+        <h1 className="services-title">
+          Our Vehicle Services
+        </h1>
+
+        <p className="services-subtitle">
+          Professional maintenance and repair solutions designed
+          to keep your vehicle safe, reliable, and performing at
+          its best.
+        </p>
       </div>
 
       <div className="services-controls-container">
         <div className="services-search-wrapper">
-          <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="services-search-icon">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          <svg
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+            className="services-search-icon"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
           </svg>
-          <input 
-            type="text" 
-            placeholder="Search services..." 
+
+          <input
+            type="text"
+            placeholder="Search services..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
             className="services-search-input"
           />
         </div>
+
         <div className="services-filters-wrapper">
-          {tabs.map(tab => (
-            <button 
+          {tabs.map((tab) => (
+            <button
               key={tab}
-              className={`services-filter-btn ${activeTab === tab ? 'active' : ''}`}
+              className={`services-filter-btn ${
+                activeTab === tab ? 'active' : ''
+              }`}
               onClick={() => setActiveTab(tab)}
             >
               {tab}
@@ -146,26 +292,73 @@ export default function Services() {
       </div>
 
       <div className="services-grid-container">
-        {filteredServices.map(service => (
-          <div className="service-card" key={service.id}>
+        {filteredServices.map((service) => (
+          <div
+            className="service-card"
+            key={service.id}
+          >
             <div className="service-image-header">
-              <span className="service-badge">AVAILABLE</span>
-              <img src={service.image} alt={service.title} className="service-img" />
+              <span className="service-badge">
+                AVAILABLE
+              </span>
+
+              <img
+                src={service.image}
+                alt={service.title}
+                className="service-img"
+              />
             </div>
+
             <div className="service-card-body">
-              <h3 className="service-card-title">{service.title}</h3>
-              <p className="service-card-desc">{service.description}</p>
-              
+              <h3 className="service-card-title">
+                {service.title}
+              </h3>
+
+              <p className="service-card-desc">
+                {service.description}
+              </p>
+
               <div className="service-card-duration">
-                <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="duration-icon">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="duration-icon"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
+
                 {service.duration}
               </div>
 
               <div className="service-card-actions">
-                <button className="btn-service-view" onClick={() => setSelectedService(service)}>View Details</button>
-                <button className="btn-service-book" onClick={() => navigate('/booking')}>Book Now</button>
+                <button
+                  className="btn-service-view"
+                  onClick={() =>
+                    setSelectedService(service)
+                  }
+                >
+                  View Details
+                </button>
+
+                <button
+                  className="btn-service-book"
+                  onClick={() =>
+                    navigate('/booking', {
+                      state: {
+                        selectedService: service
+                      }
+                    })
+                  }
+                >
+                  Book Now
+                </button>
               </div>
             </div>
           </div>
@@ -174,9 +367,9 @@ export default function Services() {
 
       <Footer />
 
-      <ServiceDetailsModal 
-        service={selectedService} 
-        onClose={() => setSelectedService(null)} 
+      <ServiceDetailsModal
+        service={selectedService}
+        onClose={() => setSelectedService(null)}
       />
     </div>
   );

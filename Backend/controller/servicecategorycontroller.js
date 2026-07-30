@@ -6,15 +6,35 @@ const getServiceCategories = async (req, res) => {
       createdAt: -1,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: services.length,
       services,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to fetch service categories",
+      error: error.message,
+    });
+  }
+};
+
+const getAllServiceCategories = async (req, res) => {
+  try {
+    const services = await ServiceCategory.find().sort({
+      createdAt: -1,
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: services.length,
+      services,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch all service categories",
       error: error.message,
     });
   }
@@ -27,6 +47,7 @@ const createServiceCategory = async (req, res) => {
       description,
       durationMins,
       price,
+      category,
       tag,
       image,
       active,
@@ -49,6 +70,7 @@ const createServiceCategory = async (req, res) => {
       description,
       durationMins,
       price,
+      category,
       tag,
       image,
       active,
@@ -82,6 +104,7 @@ const updateServiceCategory = async (req, res) => {
       "description",
       "durationMins",
       "price",
+      "category",
       "tag",
       "image",
       "active",
@@ -186,6 +209,7 @@ const deleteServiceCategory = async (req, res) => {
 
 module.exports = {
   getServiceCategories,
+  getAllServiceCategories,
   createServiceCategory,
   updateServiceCategory,
   deleteServiceCategory,

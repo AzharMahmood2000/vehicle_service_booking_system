@@ -27,6 +27,19 @@ const serviceCategorySchema = new mongoose.Schema(
       min: [0, "Service price cannot be negative"],
     },
 
+    category: {
+      type: String,
+      enum: [
+        "General",
+        "Maintenance",
+        "Diagnostics",
+        "Repairs",
+        "AC & Heating",
+      ],
+      default: "General",
+      trim: true,
+    },
+
     tag: {
       type: String,
       trim: true,
