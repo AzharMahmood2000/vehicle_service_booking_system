@@ -1,5 +1,6 @@
 const Booking = require("../models/booking");
 const ServiceBay = require("../models/servicebay");
+const Maintenance = require("../models/maintenance");
 
 const {
   hasTimeConflict,
@@ -18,6 +19,10 @@ const findAvailableBay = async (
 ) => {
   const availableBays = await ServiceBay.find({
     status: "AVAILABLE",
+
+    // Use active bays only.
+    // Existing bays without an active field are also treated as active.
+    active: { $ne: false },
   }).sort({
     name: 1,
   });
@@ -26,34 +31,72 @@ const findAvailableBay = async (
     return null;
   }
 
+  const bayIds = availableBays.map(
+    (bay) => bay._id
+  );
+
   const existingBookings = await Booking.find({
     appointmentDate,
     status: {
       $in: BLOCKING_STATUSES,
     },
     serviceBay: {
-      $in: availableBays.map((bay) => bay._id),
+      $in: bayIds,
     },
   });
+
+  const existingMaintenances =
+    await Maintenance.find({
+      maintenanceDate: appointmentDate,
+      active: true,
+      serviceBay: {
+        $in: bayIds,
+      },
+    });
 
   for (const bay of availableBays) {
     const bayBookings = existingBookings.filter(
       (booking) =>
-        booking.serviceBay.toString() === bay._id.toString()
+        booking.serviceBay.toString() ===
+        bay._id.toString()
     );
 
-    const hasConflict = bayBookings.some((booking) =>
-      hasTimeConflict(
-        startTime,
-        endTime,
-        booking.startTime,
-        booking.endTime
-      )
+    const bookingConflict = bayBookings.some(
+      (booking) =>
+        hasTimeConflict(
+          startTime,
+          endTime,
+          booking.startTime,
+          booking.endTime
+        )
     );
 
-    if (!hasConflict) {
-      return bay;
+    if (bookingConflict) {
+      continue;
     }
+
+    const bayMaintenances =
+      existingMaintenances.filter(
+        (maintenance) =>
+          maintenance.serviceBay.toString() ===
+          bay._id.toString()
+      );
+
+    const maintenanceConflict =
+      bayMaintenances.some((maintenance) =>
+        hasTimeConflict(
+          startTime,
+          endTime,
+          maintenance.startTime,
+          maintenance.endTime
+        )
+      );
+
+    if (maintenanceConflict) {
+      continue;
+    }
+
+    return bay;
   }
 
   return null;

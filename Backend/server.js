@@ -11,6 +11,8 @@ const authRoutes = require("./routes/authroutes");
 const contactRequestRoutes = require("./routes/contactrequestroutes");
 const settingRoutes = require("./routes/settingroutes");
 const dashboardRoutes = require("./routes/dashboardroutes");
+const calendarRoutes = require("./routes/calendarroutes");
+const maintenanceRoutes = require("./routes/maintenanceroutes");
 
 const app = express();
 
@@ -25,6 +27,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/contact", contactRequestRoutes);
 app.use("/api/settings", settingRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/calendar", calendarRoutes);
+app.use("/api/maintenance", maintenanceRoutes);
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     success: true,

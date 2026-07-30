@@ -14,6 +14,11 @@ const serviceBaySchema = new mongoose.Schema(
       enum: ["AVAILABLE", "MAINTENANCE", "OUT_OF_SERVICE"],
       default: "AVAILABLE",
     },
+
+    active: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
