@@ -1,21 +1,108 @@
 import React, { useState, useEffect } from 'react';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
-import { getBookings } from '../../utils/bookingStorage';
+// Important: do NOT use bookingStorage for local data
+import API_BASE_URL from '../../api';
 import { BOOKING_STATUS } from '../../constants/bookingStatus';
 import './AdminDashboard.css';
 
 export default function AdminDashboard() {
-  const [bookings, setBookings] = useState([]);
+  const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, inProgress: 0, completed: 0 });
+  const [todayBookings, setTodayBookings] = useState([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
+  const [bays, setBays] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState(null);
 
   useEffect(() => {
-    setBookings(getBookings());
+    fetchDashboardData();
   }, []);
 
-  const total = bookings.length;
-  const pending = bookings.filter(b => b.status === BOOKING_STATUS.PENDING).length;
-  const approved = bookings.filter(b => b.status === BOOKING_STATUS.APPROVED).length;
-  const completed = bookings.filter(b => b.status === BOOKING_STATUS.COMPLETED).length;
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    setApiError(null);
+    try {
+      const token = localStorage.getItem('vehiclecare_admin_token') || sessionStorage.getItem('vehiclecare_admin_token');
+      if (!token) {
+        setApiError("Authentication required. Please log in.");
+        setIsLoading(false);
+        return;
+      }
+      
+      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      
+      const [summaryRes, bookingsRes, baysRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/dashboard/summary`, config),
+        fetch(`${API_BASE_URL}/bookings`, config),
+        fetch(`${API_BASE_URL}/bays`, config).catch(() => null)
+      ]);
+      
+      if (!summaryRes || !summaryRes.ok) {
+        throw new Error("Failed to load dashboard summary.");
+      }
+      if (!bookingsRes || !bookingsRes.ok) {
+        throw new Error("Failed to load bookings.");
+      }
+      
+      let baysData = { bays: [] };
+      if (baysRes && baysRes.ok) {
+        try {
+          baysData = await baysRes.json();
+        } catch (e) {
+          console.error("Failed to parse bays:", e);
+        }
+      }
+
+      const summaryData = await summaryRes.json();
+      const bookingsData = await bookingsRes.json();
+
+      if (summaryData.bookingStats) {
+        setStats({
+          total: summaryData.bookingStats.total || 0,
+          pending: summaryData.bookingStats.requestPending || 0,
+          approved: summaryData.bookingStats.approved || 0,
+          inProgress: summaryData.bookingStats.inProgress || 0,
+          completed: summaryData.bookingStats.completed || 0,
+        });
+      }
+
+      const allBookings = bookingsData.bookings || [];
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      
+      const tBookings = allBookings.filter(b => b.appointmentDate === todayStr);
+      setTodayBookings(tBookings);
+
+      const uBookings = allBookings.filter(b => b.appointmentDate > todayStr);
+      uBookings.sort((a, b) => {
+        if (a.appointmentDate === b.appointmentDate) {
+          return (a.startTime || '').localeCompare(b.startTime || '');
+        }
+        return (a.appointmentDate || '').localeCompare(b.appointmentDate || '');
+      });
+      setUpcomingAppointments(uBookings.slice(0, 3));
+      
+      setBays(baysData.bays || []);
+    } catch (err) {
+      console.error(err);
+      setApiError("Unable to load dashboard data.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getStatusBadgeClass = (statusStr) => {
+    const s = String(statusStr || '').toUpperCase();
+    if (s === 'REQUEST PENDING' || s === 'PENDING') return 'badge-pending';
+    if (s === 'APPROVED') return 'badge-approved';
+    if (s === 'IN PROGRESS') return 'badge-progress';
+    if (s === 'COMPLETED') return 'badge-completed';
+    if (s === 'REJECTED') return 'badge-rejected';
+    if (s === 'CANCELLED') return 'badge-cancelled';
+    return 'badge-pending';
+  };
+
+  const activeBaysCount = bays.filter(b => b.active).length;
 
   return (
     <div className="admin-dashboard-layout">
@@ -25,11 +112,24 @@ export default function AdminDashboard() {
         <AdminHeader searchPlaceholder="Search vehicle or booking ID..." />
 
         <div className="dashboard-scroll-area">
+          
+          {apiError && (
+             <div style={{color: '#ff4d4f', padding: '10px 20px', background: 'rgba(255,0,0,0.1)', borderRadius: '8px', marginBottom: '20px'}}>
+               {apiError}
+             </div>
+          )}
+
+          {isLoading ? (
+            <div style={{color: '#fff', padding: '40px', textAlign: 'center'}}>
+               Loading dashboard...
+            </div>
+          ) : (
+          <>
           <div className="stats-row">
             <div className="stat-card" style={{borderLeftColor: '#A09BA5'}}>
               <div className="stat-info">
                 <span className="stat-label">Total Bookings</span>
-                <h3 className="stat-value">{total}</h3>
+                <h3 className="stat-value">{stats.total}</h3>
                 <div className="stat-trend trend-up">
                   <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                   Calculated from records
@@ -42,7 +142,7 @@ export default function AdminDashboard() {
             <div className="stat-card" style={{borderLeftColor: '#FFD700'}}>
               <div className="stat-info">
                 <span className="stat-label">Pending</span>
-                <h3 className="stat-value">{pending}</h3>
+                <h3 className="stat-value">{stats.pending}</h3>
                 <div className="stat-trend trend-neutral">Requires immediate attention</div>
               </div>
               <div className="stat-icon-wrapper" style={{background: 'rgba(255,215,0,0.1)', color: '#FFD700'}}>
@@ -52,17 +152,27 @@ export default function AdminDashboard() {
             <div className="stat-card" style={{borderLeftColor: '#FF1493'}}>
               <div className="stat-info">
                 <span className="stat-label">Approved</span>
-                <h3 className="stat-value">{approved}</h3>
+                <h3 className="stat-value">{stats.approved}</h3>
                 <div className="stat-trend trend-neutral">Scheduled for processing</div>
               </div>
               <div className="stat-icon-wrapper" style={{background: 'rgba(255,20,147,0.1)', color: '#FF1493'}}>
                 <svg fill="currentColor" viewBox="0 0 24 24" style={{width: 20, height: 20}}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2zm-1.127 15.353l-4.226-4.225 1.414-1.414 2.812 2.811 5.922-5.922 1.414 1.414-7.336 7.336z"></path></svg>
               </div>
             </div>
+            <div className="stat-card" style={{borderLeftColor: '#3B82F6'}}>
+              <div className="stat-info">
+                <span className="stat-label">In Progress</span>
+                <h3 className="stat-value">{stats.inProgress}</h3>
+                <div className="stat-trend trend-neutral">Currently servicing</div>
+              </div>
+              <div className="stat-icon-wrapper" style={{background: 'rgba(59,130,246,0.1)', color: '#3B82F6'}}>
+                <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{width: 20, height: 20}}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+              </div>
+            </div>
             <div className="stat-card" style={{borderLeftColor: '#140821'}}>
               <div className="stat-info">
                 <span className="stat-label">Completed</span>
-                <h3 className="stat-value">{completed}</h3>
+                <h3 className="stat-value">{stats.completed}</h3>
                 <div className="stat-trend trend-neutral">Services finalized</div>
               </div>
               <div className="stat-icon-wrapper" style={{background: '#F8F7FA', color: '#140821'}}>
@@ -89,172 +199,123 @@ export default function AdminDashboard() {
                   <th>NUMBER PLATE</th>
                   <th>VEHICLE MODEL</th>
                   <th>CUSTOMER</th>
-                  <th>SERVICE</th>
+                  <th>SERVICE & BAY</th>
                   <th>TIME SLOT</th>
                   <th>STATUS</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>
-                    <div className="number-plate-badge">FU-CH-911</div>
-                  </td>
-                  <td>
-                    <div className="vehicle-name">Porsche 911 GT3</div>
-                  </td>
-                  <td>
-                    <div className="customer-name">Kasun</div>
-                    <div className="customer-phone">076-8989098</div>
-                  </td>
-                  <td>
-                    <div className="service-name">Full<br/>Performance<br/>Tuning</div>
-                  </td>
-                  <td>
-                    <div className="time-slot"><svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 09:00 - 11:30</div>
-                  </td>
-                  <td><span className="badge badge-pending">PENDING</span></td>
-                </tr>
+                {todayBookings.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{textAlign: 'center', padding: '30px', color: '#A09BA5'}}>
+                       No bookings scheduled for today.
+                    </td>
+                  </tr>
+                ) : (
+                  todayBookings.map(booking => {
+                    const plate = booking.vehicleNumber || booking.numberPlate || 'N/A';
+                    const model = booking.vehicleModel || 'Unknown';
+                    const serviceTitle = booking.serviceId?.title || booking.serviceName || 'Service';
+                    const bayName = booking.serviceBay?.name || (typeof booking.serviceBay === 'string' && booking.serviceBay.includes('-') ? `Bay ${booking.serviceBay.split('-')[1]}` : booking.serviceBay || '');
 
-                <tr>
-                  <td>
-                    <div className="number-plate-badge">AU-ZN-088</div>
-                  </td>
-                  <td>
-                    <div className="vehicle-name">Mercedes S-Class</div>
-                  </td>
-                  <td>
-                    <div className="customer-name">Pasindu</div>
-                    <div className="customer-phone">076-9897875</div>
-                  </td>
-                  <td>
-                    <div className="service-name">Interior<br/>Sanitization</div>
-                  </td>
-                  <td>
-                    <div className="time-slot"><svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 10:30 - 12:00</div>
-                  </td>
-                  <td><span className="badge badge-approved">APPROVED</span></td>
-                </tr>
-
-                <tr>
-                  <td>
-                    <div className="number-plate-badge">MC-LR-720</div>
-                  </td>
-                  <td>
-                    <div className="vehicle-name">McLaren 720S</div>
-                  </td>
-                  <td>
-                    <div className="customer-name">Nuwan</div>
-                    <div className="customer-phone">076-8976564</div>
-                  </td>
-                  <td>
-                    <div className="service-name">Brake System<br/>Flush</div>
-                  </td>
-                  <td>
-                    <div className="time-slot"><svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 08:00 - 10:00</div>
-                  </td>
-                  <td><span className="badge badge-completed">COMPLETED</span></td>
-                </tr>
-
-                <tr>
-                  <td>
-                    <div className="number-plate-badge">LX-US-500</div>
-                  </td>
-                  <td>
-                    <div className="vehicle-name">Lexus LC500</div>
-                  </td>
-                  <td>
-                    <div className="customer-name">Vasana</div>
-                    <div className="customer-phone">075-7684987</div>
-                  </td>
-                  <td>
-                    <div className="service-name">Hybrid Health<br/>Check</div>
-                  </td>
-                  <td>
-                    <div className="time-slot"><svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 14:00 - 15:30</div>
-                  </td>
-                  <td><span className="badge badge-rejected">REJECTED</span></td>
-                </tr>
+                    return (
+                      <tr key={booking._id}>
+                        <td>
+                          <div className="number-plate-badge">{plate}</div>
+                        </td>
+                        <td>
+                          <div className="vehicle-name">{model}</div>
+                        </td>
+                        <td>
+                          <div className="customer-name">{booking.customerName}</div>
+                          <div className="customer-phone">{booking.phoneNumber}</div>
+                        </td>
+                        <td>
+                          <div className="service-name">{serviceTitle}</div>
+                          {bayName && <div style={{fontSize: '11px', color:'#FF1493', marginTop: '4px', fontWeight: 600}}>{bayName}</div>}
+                        </td>
+                        <td>
+                          <div className="time-slot"><svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> {booking.startTime} {booking.endTime ? `- ${booking.endTime}` : ''}</div>
+                        </td>
+                        <td><span className={`badge ${getStatusBadgeClass(booking.status)}`}>{booking.status}</span></td>
+                      </tr>
+                    )
+                  })
+                )}
               </tbody>
             </table>
           </div>
 
           <div className="dashboard-bottom-grid">
+            {/* Live Workshop View mapped to truthful operational metrics */}
             <div className="live-workshop-card">
               <div className="workshop-header">
                 <h3>Live<br/>Workshop<br/>View</h3>
-                <div className="bay-status">
-                  BAY 04<br/>ACTIVE
+                <div className="bay-status" style={{color: '#140821', background: 'rgba(0,0,0,0.05)', padding: '4px 8px', borderRadius: '4px'}}>
+                  REALTIME
                 </div>
               </div>
-              <div className="video-placeholder">
-                <svg fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+              <div className="video-placeholder" style={{flexDirection: 'column', color: '#140821'}}>
+                <div style={{fontSize: '28px', fontWeight: 800}}>{activeBaysCount}</div>
+                <div style={{fontSize: '11px', fontWeight: 700}}>Active Bays</div>
               </div>
               <div className="workshop-footer">
-                <div>MECHANIC:<br/>DAVID S.</div>
-                <div>Est. Completion: 18<br/>mins</div>
+                <div>IN PROGRESS:<br/>{stats.inProgress} Bookings</div>
+                <div>APPROVED:<br/>{stats.approved} Bookings</div>
               </div>
             </div>
 
+            {/* Hiding the fake efficiency analytics and replacing with an empty flex placeholder to preserve layout if 3-column grid is required, or replacing with real metrics if desired. Let's just repurpose the card to display booking flow. */}
             <div className="efficiency-card">
               <div className="eff-block">
-                <div className="eff-title">Service Efficiency</div>
-                <div className="eff-value">94.2%</div>
+                <div className="eff-title">Completion Rate</div>
+                <div className="eff-value">{stats.total > 0 ? Math.round((stats.completed / (stats.total || 1)) * 100) : 0}%</div>
                 <div className="eff-bar-label">
-                  <span>Average Turnaround</span>
-                  <span className="text-pink">Optimal</span>
+                  <span>Based on all tasks</span>
+                  <span className="text-pink">Dynamic</span>
                 </div>
-                <div className="progress-bg"><div className="progress-fill pink" style={{width:'94%'}}></div></div>
+                <div className="progress-bg"><div className="progress-fill pink" style={{width: `${stats.total > 0 ? Math.round((stats.completed / (stats.total || 1)) * 100) : 0}%`}}></div></div>
               </div>
               
               <div className="eff-block">
                 <div className="eff-bar-label">
-                  <span style={{color: '#fff'}}>Parts Availability</span>
-                  <span className="text-yellow">Medium</span>
+                  <span style={{color: '#fff'}}>Pending Requests</span>
+                  <span className="text-yellow">{stats.pending}</span>
                 </div>
-                <div className="progress-bg"><div className="progress-fill yellow" style={{width:'60%'}}></div></div>
+                <div className="progress-bg"><div className="progress-fill yellow" style={{width: `${stats.total > 0 ? Math.round((stats.pending / (stats.total || 1)) * 100) : 0}%`}}></div></div>
               </div>
 
-              <button className="btn-outline-glow">GENERATE ANALYTICS REPORT</button>
+              <button className="btn-outline-glow">REFRESH DASHBOARD</button>
             </div>
 
             <div className="upcoming-appointments-card">
               <h3>Upcoming<br/>Appointments</h3>
               <div className="appointment-list">
-                <div className="appt-item">
-                  <div className="appt-date"><span>Oct</span><strong>24</strong></div>
-                  <div className="appt-details">
-                    <h4>Volvo XC90 Service</h4>
-                    <p>14:00 - Regular Maintenance</p>
-                  </div>
-                </div>
-                <div className="appt-item">
-                  <div className="appt-date"><span>Oct</span><strong>24</strong></div>
-                  <div className="appt-details">
-                    <h4>Tesla Model S</h4>
-                    <p>16:30 - Diagnostic Check</p>
-                  </div>
-                </div>
-                <div className="appt-item">
-                  <div className="appt-date pink-date"><span>Oct</span><strong>25</strong></div>
-                  <div className="appt-details">
-                    <h4>Audi R8 V10</h4>
-                    <p>09:00 - Oil Change & Filter</p>
-                  </div>
-                </div>
+                {upcomingAppointments.length === 0 ? (
+                  <div style={{color: '#A09BA5', fontSize: '13px'}}>No upcoming appointments.</div>
+                ) : (
+                  upcomingAppointments.map((appt, i) => {
+                    const dateObj = new Date(appt.appointmentDate);
+                    const month = dateObj.toLocaleString('default', { month: 'short' });
+                    const day = dateObj.getDate();
+                    return (
+                      <div className="appt-item" key={appt._id}>
+                        <div className={`appt-date ${i===2 ? 'pink-date' : ''}`}><span>{month}</span><strong>{day}</strong></div>
+                        <div className="appt-details">
+                          <h4>{appt.vehicleModel || appt.vehicleNumber}</h4>
+                          <p>{appt.startTime} - {appt.serviceId?.title || appt.serviceName || 'Service'}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
-              <div className="workshop-chart">
-                <div className="chart-label">WORKSHOP EFFICIENCY</div>
-                <div className="chart-bars">
-                  <div className="bar grey" style={{height: '30%'}}></div>
-                  <div className="bar grey" style={{height: '50%'}}></div>
-                  <div className="bar pink" style={{height: '100%'}}></div>
-                  <div className="bar grey" style={{height: '40%'}}></div>
-                  <div className="bar grey" style={{height: '25%'}}></div>
-                  <div className="bar grey" style={{height: '15%'}}></div>
-                </div>
-              </div>
+              {/* Removed fake static workshop chart entirely since backend does not provide workshop hourly load data */}
             </div>
           </div>
+          </>
+          )}
+
         </div>
       </main>
     </div>

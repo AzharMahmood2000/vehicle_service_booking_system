@@ -138,3 +138,52 @@
 .edit-form-actions {
   display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;
 }
+.edit-form-actions.top-actions { margin-bottom: 24px; }
+
+.bay-list-header { margin-bottom: 24px; }
+.add-bay-form {
+  background: #F8F7FA; border: 1px solid #EBE9F1;
+  padding: 16px; border-radius: 8px;
+}
+
+.bay-row.deactivated {
+  background: #FAFAFA; border-color: #E2E8F0;
+}
+.bay-status-badge.deactivated {
+  color: #64748B; background: #F1F5F9;
+}
+.bay-status-badge.deactivated .dot { background: #64748B; }
+
+.rename-row {
+  display: flex; gap: 12px;
+}
+.rename-row input { flex: 1; }
+
+.reactivate-section {
+  background: #F8F7FA; border: 1px solid #EBE9F1;
+  border-radius: 8px; padding: 20px; text-align: center;
+  margin-top: 24px;
+}
+.deactivated-notice h4 { margin: 0 0 8px 0; color: #0F0519; }
+.deactivated-notice p { margin: 0 0 20px 0; font-size: 0.9rem; color: #6A5C7A; }
+
+.status-helper {
+  font-size: 0.85rem; color: #6A5C7A; margin-bottom: 20px; font-style: italic;
+}
+
+.divider { border: 0; border-top: 1px solid #EBE9F1; margin: 30px 0; }
+
+.deactivate-section {
+  background: #FFF5F5; border: 1px solid #FED7D7;
+  border-radius: 8px; padding: 20px;
+}
+.deactivate-section h4 { margin: 0 0 8px 0; color: #C53030; }
+.deactivate-section p { margin: 0 0 16px 0; font-size: 0.85rem; color: #E53E3E; }
+
+.btn-danger {
+  background: #E53E3E; color: #FFF; border: none; padding: 10px 16px;
+  border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-danger:hover:not(:disabled) { background: #C53030; }
+.btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }

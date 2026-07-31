@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
-import { getBookings, updateBookingStatus } from '../../utils/bookingStorage';
+// Important: do NOT remove the bookingStorage file, but we remove the imports for it.
+import API_BASE_URL from '../../api';
 import { BOOKING_STATUS, BOOKING_STATUS_CONFIG } from '../../constants/bookingStatus';
 import './AdminManageBookings.css';
 
@@ -15,14 +16,55 @@ const STATUS_LIST = [
 
 export default function AdminManageBookings() {
   const [bookings, setBookings] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState(null);
+
+  const [activeTab, setActiveTab] = useState('All Bookings');
+  const [filters, setFilters] = useState({
+    reference: '',
+    customer: '',
+    vehicle: '',
+    status: 'All Statuses'
+  });
+
   const [openStatusMenu, setOpenStatusMenu] = useState(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, placement: 'left', arrowTop: 0 });
   const menuBtnRefs = useRef({});
 
   useEffect(() => {
-    // Load from centralized shared storage
-    setBookings(getBookings());
+    fetchBookings();
   }, []);
+
+  const fetchBookings = async () => {
+    setIsLoading(true);
+    setApiError(null);
+    try {
+      const token = localStorage.getItem('vehiclecare_admin_token') || sessionStorage.getItem('vehiclecare_admin_token');
+      if (!token) {
+        setApiError("Authentication required.");
+        setIsLoading(false);
+        return;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/bookings`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to load bookings.");
+      }
+
+      setBookings(data.bookings || []);
+    } catch (err) {
+      console.error("Booking fetch error:", err);
+      setApiError("Unable to load bookings. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Close status dropdown if clicking anywhere else or pressing Escape
   useEffect(() => {
@@ -104,21 +146,79 @@ export default function AdminManageBookings() {
     setOpenStatusMenu(bookingId);
   }, [openStatusMenu]);
 
-  const handleStatusChange = (bookingId, newStatus) => {
+  const handleStatusChange = async (bookingId, newStatus) => {
     if (newStatus === BOOKING_STATUS.REJECTED) {
       const confirmReject = window.confirm("Are you sure you want to reject this booking?");
       if (!confirmReject) return;
     }
 
-    // Actually update the shared localStorage
-    const updated = updateBookingStatus(bookingId, newStatus);
-    setBookings(updated);
-    setOpenStatusMenu(null);
+    try {
+      const token = localStorage.getItem('vehiclecare_admin_token') || sessionStorage.getItem('vehiclecare_admin_token');
+      if (!token) {
+        setApiError("Authentication required.");
+        return;
+      }
+      
+      const res = await fetch(`${API_BASE_URL}/bookings/${bookingId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to update booking status.");
+      }
+
+      setBookings(prev => prev.map(b => b._id === bookingId ? data.booking : b));
+      setOpenStatusMenu(null);
+    } catch (err) {
+      console.error("Status update error:", err);
+      // fallback logging without alerting immediately on API error, requirement says: show/log the backend message, do not pretend it succeeded
+    }
   };
 
   const getStatusClass = (statusStr) => {
     return BOOKING_STATUS_CONFIG[statusStr]?.cssClass || 'status-req-pending';
   };
+
+  const handleFilterChange = (e, field) => {
+    setFilters(prev => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const filteredBookings = bookings.filter(b => {
+    // Tab filter
+    if (activeTab === 'Request Pending' && b.status !== BOOKING_STATUS.PENDING) return false;
+    if (activeTab === 'Approved' && b.status !== BOOKING_STATUS.APPROVED) return false;
+    if (activeTab === 'In Progress' && b.status !== BOOKING_STATUS.IN_PROGRESS) return false;
+    if (activeTab === 'Completed' && b.status !== BOOKING_STATUS.COMPLETED) return false;
+
+    // Search filters
+    if (filters.reference && !(b.referenceNumber || '').toLowerCase().includes(filters.reference.toLowerCase())) return false;
+    if (filters.customer && 
+        !((b.customerName || '').toLowerCase().includes(filters.customer.toLowerCase()) || 
+          (b.phoneNumber || '').toLowerCase().includes(filters.customer.toLowerCase()))) return false;
+    if (filters.vehicle && 
+        !((b.vehicleNumber || b.numberPlate || '').toLowerCase().includes(filters.vehicle.toLowerCase()) || 
+          (b.vehicleModel || '').toLowerCase().includes(filters.vehicle.toLowerCase()))) return false;
+    
+    if (filters.status !== 'All Statuses') {
+      const statusLabelToEnum = {
+        'Request Pending': BOOKING_STATUS.PENDING,
+        'Approved': BOOKING_STATUS.APPROVED,
+        'In Progress': BOOKING_STATUS.IN_PROGRESS,
+        'Completed': BOOKING_STATUS.COMPLETED,
+        'Rejected': BOOKING_STATUS.REJECTED
+      };
+      const targetStatus = statusLabelToEnum[filters.status];
+      if (targetStatus && b.status !== targetStatus) return false;
+    }
+    
+    return true;
+  });
 
   return (
     <div className="admin-bookings-layout">
@@ -163,29 +263,33 @@ export default function AdminManageBookings() {
 
           <div className="bookings-main-card">
             <div className="bookings-tabs">
-              <button className="tab active">All Bookings</button>
-              <button className="tab">Request Pending</button>
-              <button className="tab">Approved</button>
-              <button className="tab">In Progress</button>
-              <button className="tab">Completed</button>
+              {['All Bookings', 'Request Pending', 'Approved', 'In Progress', 'Completed'].map(tab => (
+                <button 
+                  key={tab}
+                  className={`tab ${activeTab === tab ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {tab}
+                </button>
+              ))}
             </div>
 
             <div className="bookings-filters">
               <div className="filter-group">
                 <label>REFERENCE</label>
-                <input type="text" placeholder="VSB-XXXX" />
+                <input type="text" placeholder="VSB-XXXX" value={filters.reference} onChange={(e) => handleFilterChange(e, 'reference')} />
               </div>
               <div className="filter-group">
                 <label>CUSTOMER</label>
-                <input type="text" placeholder="Name or email" />
+                <input type="text" placeholder="Name or email" value={filters.customer} onChange={(e) => handleFilterChange(e, 'customer')} />
               </div>
               <div className="filter-group">
                 <label>VEHICLE</label>
-                <input type="text" placeholder="Plate number" />
+                <input type="text" placeholder="Plate number" value={filters.vehicle} onChange={(e) => handleFilterChange(e, 'vehicle')} />
               </div>
               <div className="filter-group">
                 <label>STATUS</label>
-                <select>
+                <select value={filters.status} onChange={(e) => handleFilterChange(e, 'status')}>
                   <option>All Statuses</option>
                   <option>Request Pending</option>
                   <option>Approved</option>
@@ -208,11 +312,11 @@ export default function AdminManageBookings() {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map((booking) => (
-                    <tr key={booking.referenceNumber || booking.id} className={openStatusMenu === (booking.referenceNumber || booking.id) ? 'menu-open' : ''}>
-                      <td><strong>{booking.referenceNumber || booking.id}</strong></td>
+                  {!isLoading && filteredBookings.map((booking) => (
+                    <tr key={booking._id} className={openStatusMenu === booking._id ? 'menu-open' : ''}>
+                      <td><strong>{booking.referenceNumber}</strong></td>
                       <td>
-                        <span className="plate-badge yellow-plate">{booking.numberPlate}</span>
+                        <span className="plate-badge yellow-plate">{booking.vehicleNumber || booking.numberPlate}</span>
                         <div className="vehicle-table-name">{booking.vehicleModel}</div>
                       </td>
                       <td>
@@ -220,12 +324,12 @@ export default function AdminManageBookings() {
                         <div className="person-phone">{booking.phoneNumber}</div>
                       </td>
                       <td>
-                        <div style={{ fontWeight: 600, color: '#0F0519' }}>{booking.serviceName}</div>
+                        <div style={{ fontWeight: 600, color: '#0F0519' }}>{booking.serviceId?.title || booking.serviceName}</div>
                         <div style={{ fontSize: '13px', color: '#6A5C7A', marginTop: '4px' }}>
                           📅 {booking.appointmentDate} | ⏰ {booking.startTime}
                         </div>
                         <div style={{ fontSize: '11px', color: '#FF1493', marginTop: '2px', fontWeight: 600 }}>
-                           Bay {(booking.serviceBay || '').split('-')[1]}
+                           {booking.serviceBay?.name || (typeof booking.serviceBay === 'string' && booking.serviceBay.includes('-') ? `Bay ${booking.serviceBay.split('-')[1]}` : booking.serviceBay || '')}
                         </div>
                       </td>
                       <td>
@@ -235,8 +339,8 @@ export default function AdminManageBookings() {
                           </div>
                           <button 
                             className="status-menu-btn"
-                            ref={(el) => (menuBtnRefs.current[booking.referenceNumber || booking.id] = el)}
-                            onClick={(e) => openDropdown(booking.referenceNumber || booking.id, e)}
+                            ref={(el) => (menuBtnRefs.current[booking._id] = el)}
+                            onClick={(e) => openDropdown(booking._id, e)}
                           >
                             <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
                           </button>
@@ -244,7 +348,28 @@ export default function AdminManageBookings() {
                       </td>
                     </tr>
                   ))}
-                  {bookings.length === 0 && (
+                  {isLoading && (
+                     <tr>
+                        <td colSpan="5" style={{textAlign: 'center', padding: '40px 0', color: '#6A5C7A'}}>
+                           Loading bookings...
+                        </td>
+                     </tr>
+                  )}
+                  {!isLoading && apiError && (
+                     <tr>
+                        <td colSpan="5" style={{textAlign: 'center', padding: '40px 0', color: '#e74c3c'}}>
+                           {apiError}
+                        </td>
+                     </tr>
+                  )}
+                  {!isLoading && !apiError && bookings.length > 0 && filteredBookings.length === 0 && (
+                     <tr>
+                        <td colSpan="5" style={{textAlign: 'center', padding: '40px 0', color: '#6A5C7A'}}>
+                           No bookings match the selected filters.
+                        </td>
+                     </tr>
+                  )}
+                  {!isLoading && !apiError && bookings.length === 0 && (
                      <tr>
                         <td colSpan="5" style={{textAlign: 'center', padding: '40px 0', color: '#6A5C7A'}}>
                            No bookings found.
@@ -257,7 +382,7 @@ export default function AdminManageBookings() {
 
             {/* Portal-style fixed dropdown rendered outside the table */}
             {openStatusMenu && (() => {
-              const booking = bookings.find(b => (b.referenceNumber || b.id) === openStatusMenu);
+              const booking = bookings.find(b => b._id === openStatusMenu);
               if (!booking) return null;
               return (
                 <div
@@ -281,7 +406,7 @@ export default function AdminManageBookings() {
                       <div
                         key={statusKey}
                         className={`status-dropdown-item ${booking.status === statusKey ? 'active' : ''}`}
-                        onClick={() => handleStatusChange(booking.referenceNumber || booking.id, statusKey)}
+                        onClick={() => handleStatusChange(booking._id, statusKey)}
                       >
                         <span style={{ flex: 1 }}>{BOOKING_STATUS_CONFIG[statusKey]?.label || statusKey}</span>
                         {booking.status === statusKey && (
@@ -297,7 +422,7 @@ export default function AdminManageBookings() {
             })()}
 
             <div className="bookings-pagination">
-              <div className="page-info">Showing 1 to {Math.min(10, bookings.length)} of {bookings.length} entries</div>
+              <div className="page-info">Showing {filteredBookings.length > 0 ? 1 : 0} to {Math.min(10, filteredBookings.length)} of {filteredBookings.length} entries</div>
               <div className="page-controls">
                 <button className="page-btn page-arrow">&lt;</button>
                 <button className="page-btn page-num active">1</button>
