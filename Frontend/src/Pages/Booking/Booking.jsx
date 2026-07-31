@@ -133,8 +133,8 @@ export default function Booking() {
           throw new Error(data.message || 'Failed to check availability');
         }
 
-        if (data.closed) {
-          setSlotsMessage('This date is a closed day. Please choose another date.');
+        if (data.closed || data.sameDayBlocked || data.pastDate || data.beyondAdvanceLimit) {
+          setSlotsMessage(data.message || 'This date is not available for booking. Please choose another date.');
           setAvailableSlots([]);
           return;
         }

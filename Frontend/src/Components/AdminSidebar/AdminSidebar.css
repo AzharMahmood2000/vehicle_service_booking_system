@@ -262,6 +262,11 @@
   color: #A09BA5;
   letter-spacing: 0.5px;
 }
+
+/* Explicitly brighten form labels strictly for the CreateBookingModal */
+.manual-booking-modal .form-group label {
+  color: #E9E3EC;
+}
 .form-group input,
 .form-group select,
 .form-group textarea {

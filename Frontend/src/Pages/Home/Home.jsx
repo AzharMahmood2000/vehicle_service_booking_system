@@ -3,6 +3,7 @@ import { NavLink, useNavigate, Link } from 'react-router-dom';
 import ServiceDetailsModal from '../../Components/ServiceDetailsModal';
 import Navbar from '../../Components/Navbar';
 import Footer from '../../Components/Footer';
+import API_BASE_URL from '../../api';
 import './Home.css';
 
 const servicesData = [
@@ -103,22 +104,88 @@ const Home = () => {
     address: "123 Engine Street, NY 10001",
     phone: "+1 234 567 8900",
     email: "support@vehiclecare.com",
-    supportDays: "Mon - Sun",
-    businessHours: "09:00 AM - 05:00 PM",
-    mapEmbedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d193595.1583091352!2d-74.11976373946234!3d40.69766374859258!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c24fa5d33f083b%3A0xc80b8f06e177fe62!2sNew%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2s",
-    directionsUrl: "https://maps.google.com/?q=123+Engine+Street,+NY+10001"
+    mapEmbedUrl: "",
+    directionsUrl: ""
   });
+  const [businessHoursDisplay, setBusinessHoursDisplay] = useState('');
+  const [closedDaysDisplay, setClosedDaysDisplay] = useState('');
+
+  const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', message: '' });
+  const [contactStatus, setContactStatus] = useState({ loading: false, msg: '', type: '' });
 
   useEffect(() => {
-    const saved = localStorage.getItem('vehiclecare_contact_location');
-    if (saved) {
+    const fetchSettings = async () => {
       try {
-        setContactData(JSON.parse(saved));
+        const [contactRes, rulesRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/settings/contact_info`),
+          fetch(`${API_BASE_URL}/settings/booking_rules`)
+        ]);
+
+        if (contactRes.ok) {
+          const contactJSON = await contactRes.json();
+          if (contactJSON.success && contactJSON.setting && contactJSON.setting.value) {
+            setContactData(contactJSON.setting.value);
+          } else {
+            // Nullify mock details if none saved in DB
+            setContactData({
+              locationName: "", address: "", phone: "", email: "", mapEmbedUrl: "", directionsUrl: ""
+            });
+          }
+        }
+
+        if (rulesRes.ok) {
+          const rulesJSON = await rulesRes.json();
+          if (rulesJSON.success && rulesJSON.setting && rulesJSON.setting.value) {
+            const rules = rulesJSON.setting.value;
+            // Format time: 09:00 -> 9:00 AM
+            const formatTime = (time24) => {
+              if (!time24) return '';
+              let [h, m] = time24.split(':');
+              let hh = parseInt(h, 10);
+              let suffix = hh >= 12 ? 'PM' : 'AM';
+              if (hh === 0) hh = 12;
+              if (hh > 12) hh -= 12;
+              return `${hh}:${m} ${suffix}`;
+            };
+            
+            if (rules.openingTime && rules.closingTime) {
+              setBusinessHoursDisplay(`${formatTime(rules.openingTime)} - ${formatTime(rules.closingTime)}`);
+            }
+            if (rules.closedDays && rules.closedDays.length > 0) {
+              setClosedDaysDisplay(rules.closedDays.join(', ') + ' Closed');
+            }
+          }
+        }
       } catch (e) {
-        console.error("Failed to parse local contact settings", e);
+        console.error("Failed to fetch public settings", e);
       }
-    }
+    };
+    fetchSettings();
   }, []);
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    setContactStatus({ loading: true, msg: '', type: '' });
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contactForm)
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to submit request.');
+      }
+      
+      setContactStatus({ loading: false, msg: 'Message sent successfully!', type: 'success' });
+      setContactForm({ name: '', email: '', phone: '', message: '' });
+      setTimeout(() => setContactStatus({ loading: false, msg: '', type: '' }), 4000);
+    } catch (err) {
+      setContactStatus({ loading: false, msg: err.message, type: 'error' });
+    }
+  };
 
   return (
     <div className="home-container">
@@ -246,30 +313,36 @@ const Home = () => {
             <div className="contact-form-card">
               <h2 className="contact-form-title">Get In Touch</h2>
               
-              <form className="contact-form">
+              <form className="contact-form" onSubmit={handleContactSubmit}>
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Full Name</label>
-                    <input type="text" placeholder="Kasun Amjana" className="form-input" />
+                    <input type="text" placeholder="Kasun Amjana" className="form-input" required value={contactForm.name} onChange={e => setContactForm(p=>({...p, name: e.target.value}))} disabled={contactStatus.loading} />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Email Address (Optional)</label>
-                    <input type="email" placeholder="kasun@example.com" className="form-input" />
+                    <label className="form-label">Email Address</label>
+                    <input type="email" placeholder="kasun@example.com" className="form-input" required value={contactForm.email} onChange={e => setContactForm(p=>({...p, email: e.target.value}))} disabled={contactStatus.loading} />
                   </div>
                 </div>
                 
                 <div className="form-group">
                   <label className="form-label">Mobile Number</label>
-                  <input type="tel" placeholder="074-1234567" className="form-input" />
+                  <input type="tel" placeholder="074-1234567" className="form-input" required value={contactForm.phone} onChange={e => setContactForm(p=>({...p, phone: e.target.value}))} disabled={contactStatus.loading} />
                 </div>
                 
                 <div className="form-group">
                   <label className="form-label">Message</label>
-                  <textarea placeholder="Tell us about your requirements..." rows="4" className="form-textarea"></textarea>
+                  <textarea placeholder="Tell us about your requirements..." rows="4" className="form-textarea" required value={contactForm.message} onChange={e => setContactForm(p=>({...p, message: e.target.value}))} disabled={contactStatus.loading}></textarea>
                 </div>
                 
-                <button type="button" className="btn-submit">
-                  Submit Request
+                {contactStatus.msg && (
+                  <div style={{ padding: '12px', borderRadius: '4px', marginBottom: '16px', fontSize: '14px', backgroundColor: contactStatus.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: contactStatus.type === 'error' ? '#EF4444' : '#10B981' }}>
+                    {contactStatus.msg}
+                  </div>
+                )}
+                
+                <button type="submit" className="btn-submit" disabled={contactStatus.loading}>
+                  {contactStatus.loading ? 'Sending...' : 'Submit Request'}
                 </button>
               </form>
             </div>
@@ -302,10 +375,19 @@ const Home = () => {
                 <div className="map-text">
                   <h4 className="map-address-title">{contactData.address}</h4>
                   <p className="map-details">{contactData.locationName}</p>
-                  <p className="map-schedule">Support Days: {contactData.supportDays}</p>
-                  {contactData.businessHours && <p className="map-schedule" style={{marginTop: '-10px'}}>Hours: {contactData.businessHours}</p>}
                   
-                  <div className="map-links">
+                  {/* Derive business hours from booking rules directly! */}
+                  <p className="map-schedule" style={{marginTop: '4px', fontWeight: '500', color: '#ff107a'}}>Operating Hours</p>
+                  {businessHoursDisplay ? (
+                    <p className="map-schedule" style={{marginTop: '-2px'}}>{businessHoursDisplay}</p>
+                  ) : (
+                    <p className="map-schedule" style={{marginTop: '-2px'}}>Hours configured internally.</p>
+                  )}
+                  {closedDaysDisplay && (
+                    <p className="map-schedule" style={{marginTop: '-6px', fontSize: '13px', opacity: 0.8}}>{closedDaysDisplay}</p>
+                  )}
+                  
+                  <div className="map-links" style={{ flexWrap: 'wrap' }}>
                     {contactData.directionsUrl ? (
                       <a href={contactData.directionsUrl} target="_blank" rel="noopener noreferrer" className="map-link-directions">Directions</a>
                     ) : (
@@ -313,7 +395,7 @@ const Home = () => {
                     )}
                     <span className="map-divider">|</span>
                     {contactData.phone ? (
-                      <a href={`tel:${contactData.phone.replace(/\s+/g, '')}`} className="map-link-call">Call Us</a>
+                      <a href={`tel:${contactData.phone.replace(/\s+/g, '')}`} className="map-link-call">Call: {contactData.phone}</a>
                     ) : (
                       <span className="map-link-call" style={{opacity: 0.5, cursor: 'not-allowed'}}>Call Us</span>
                     )}

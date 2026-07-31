@@ -68,20 +68,43 @@
   height: 20px;
 }
 
+/* Bell hover state */
+.admin-header-bell-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.admin-header-bell-btn:hover {
+  background-color: rgba(255,255,255,0.08);
+}
+
 /* Notification Bell Container */
 .admin-header-icon-container {
   position: relative;
 }
 
-.admin-header-notif-badge {
+/* Badge Count (number) */
+.admin-header-notif-badge-count {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 6px;
-  height: 6px;
-  background-color: var(--primary-pink);
-  border-radius: 50%;
-  border: 1.5px solid #1A0B2E;
+  top: 0;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  background-color: #FF1493;
+  border-radius: 9px;
+  border: 2px solid #1A0B2E;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+  pointer-events: none;
 }
 
 /* Notification Dropdown */
@@ -100,6 +123,13 @@
   border: 1px solid rgba(255,255,255,0.05);
 }
 
+@media (max-width: 480px) {
+  .admin-header-notification-dropdown {
+    width: calc(100vw - 32px);
+    right: -16px;
+  }
+}
+
 .admin-header-notif-header {
   display: flex;
   justify-content: space-between;
@@ -113,6 +143,20 @@
   color: #FFFFFF;
   font-size: 16px;
   font-weight: 500;
+}
+
+.admin-header-notif-total-badge {
+  min-width: 22px;
+  height: 22px;
+  background-color: #FF1493;
+  border-radius: 11px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
 }
 
 .admin-header-mark-read-btn {
@@ -129,19 +173,45 @@
 .admin-header-notif-list {
   display: flex;
   flex-direction: column;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Section label */
+.admin-header-notif-section-label {
+  padding: 12px 24px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #726B7A;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.admin-header-notif-section-label:first-child {
+  border-top: none;
 }
 
 .admin-header-notif-item {
   display: flex;
   gap: 16px;
-  padding: 20px 24px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding: 16px 24px;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
   transition: background 0.2s;
   cursor: pointer;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+}
+
+.admin-header-notif-item.unread {
+  background: rgba(255,20,147,0.02);
 }
 
 .admin-header-notif-item:hover {
-  background: rgba(255,255,255,0.02);
+  background: rgba(255,255,255,0.03);
 }
 
 .admin-header-notif-item:last-child {
@@ -163,12 +233,14 @@
 .admin-header-notif-icon.bg-purple { background-color: #2D0A47; }
 .admin-header-notif-icon.bg-red { background-color: #AA0000; }
 .admin-header-notif-icon.bg-olive { background-color: #38382B; color: #D7CA9E; }
+.admin-header-notif-icon.bg-teal { background-color: #0F3B3D; color: #5EEAD4; }
 
 .admin-header-notif-content {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
+  min-width: 0;
 }
 
 .admin-header-notif-title-row {
@@ -183,20 +255,29 @@
   font-weight: 700;
 }
 
+.admin-header-notif-title.read-title {
+  color: #B0A6B9;
+  font-weight: 600;
+}
+
 .admin-header-unread-dot {
   width: 8px;
   height: 8px;
-  background-color: var(--primary-pink);
+  background-color: #FF1493;
   border-radius: 50%;
   margin-top: 4px;
-  box-shadow: 0 0 8px var(--primary-pink);
+  flex-shrink: 0;
+  box-shadow: 0 0 8px #FF1493;
 }
 
 .admin-header-notif-desc {
   color: #B0A6B9;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.4;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .admin-header-notif-time {
@@ -204,20 +285,55 @@
   font-size: 11px;
 }
 
+/* Empty state */
+.admin-header-notif-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.admin-header-notif-empty-title {
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.admin-header-notif-empty-desc {
+  color: #726B7A;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 240px;
+}
+
+/* Footer with two buttons */
+.admin-header-notif-footer {
+  display: flex;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
 .admin-header-notif-footer-btn {
+  flex: 1;
   background-color: #241F2B;
   border: none;
-  border-top: 1px solid rgba(255,255,255,0.05);
   color: #D8CFE6;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 16px;
+  padding: 14px 8px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
+  font-family: inherit;
+}
+
+.admin-header-notif-footer-btn:first-child {
+  border-right: 1px solid rgba(255,255,255,0.05);
 }
 
 .admin-header-notif-footer-btn:hover {
   background-color: #1F1926;
+  color: #FF1493;
 }
 
 /* Profile dropdown */

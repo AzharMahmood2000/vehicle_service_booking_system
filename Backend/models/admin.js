@@ -20,6 +20,11 @@ const adminSchema = new mongoose.Schema(
       type: String,
       required: [true, "Admin password is required"],
     },
+
+    profileImage: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,

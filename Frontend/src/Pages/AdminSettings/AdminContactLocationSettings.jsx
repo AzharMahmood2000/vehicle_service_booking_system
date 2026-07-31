@@ -1,30 +1,64 @@
 import React, { useState, useEffect } from 'react';
+import API_BASE_URL from '../../api';
 
 const defaultContactData = {
   locationName: "VehicleCare Headquarters",
   address: "123 Engine Street, NY 10001",
-  phone: "+1 234 567 8900",
+  phone: "078-7898098",
   email: "support@vehiclecare.com",
-  supportDays: "Mon - Sun",
-  businessHours: "09:00 AM - 05:00 PM",
-  mapEmbedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d193595.1583091352!2d-74.11976373946234!3d40.69766374859258!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c24fa5d33f083b%3A0xc80b8f06e177fe62!2sNew%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2s",
-  directionsUrl: "https://maps.google.com/?q=123+Engine+Street,+NY+10001"
+  mapEmbedUrl: "",
+  directionsUrl: ""
 };
 
 export default function AdminContactLocationSettings() {
   const [formData, setFormData] = useState(defaultContactData);
   const [showToast, setShowToast] = useState(false);
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const getToken = () => {
+    return localStorage.getItem('vehiclecare_admin_token') ||
+      sessionStorage.getItem('vehiclecare_admin_token');
+  };
 
   useEffect(() => {
-    const saved = localStorage.getItem('vehiclecare_contact_location');
-    if (saved) {
+    const fetchContactData = async () => {
       try {
-        setFormData(JSON.parse(saved));
+        setLoading(true);
+        setErrorMsg('');
+        const response = await fetch(`${API_BASE_URL}/settings/contact_info`);
+        const result = await response.json();
+        if (response.ok && result.success && result.setting && result.setting.value) {
+          const loadedData = result.setting.value;
+          setFormData({
+            locationName: loadedData.locationName || defaultContactData.locationName,
+            address: loadedData.address || defaultContactData.address,
+            phone: loadedData.phone || defaultContactData.phone,
+            email: loadedData.email || defaultContactData.email,
+            mapEmbedUrl: loadedData.mapEmbedUrl || defaultContactData.mapEmbedUrl,
+            directionsUrl: loadedData.directionsUrl || defaultContactData.directionsUrl
+          });
+        } else {
+          // Empty initial UI fallback (do not forcefully write to NY default values automatically)
+          setFormData({
+            locationName: "",
+            address: "",
+            phone: "",
+            email: "",
+            mapEmbedUrl: "",
+            directionsUrl: ""
+          });
+        }
       } catch (e) {
-        console.error("Failed to parse settings", e);
+        console.error("Failed to fetch contact settings", e);
+        setErrorMsg('Failed to load contact settings from backend.');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+    fetchContactData();
   }, []);
 
   const handleChange = (e) => {
@@ -42,22 +76,69 @@ export default function AdminContactLocationSettings() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSaveChanges = () => {
-    if (validate()) {
-      localStorage.setItem('vehiclecare_contact_location', JSON.stringify(formData));
+  const handleSaveChanges = async () => {
+    if (!validate()) return;
+    
+    try {
+      setIsSubmitting(true);
+      setErrorMsg('');
+
+      const token = getToken();
+      const response = await fetch(`${API_BASE_URL}/settings/contact_info`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ value: formData })
+      });
+
+      const data = await response.json();
+
+      if (response.status === 401) {
+        throw new Error("Your session has expired. Please log in again.");
+      }
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Unable to update contact settings. Please try again.');
+      }
+
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
+    } catch (e) {
+      console.error(e);
+      setErrorMsg(e.message || 'Unable to update contact settings. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const isValidEmbed = formData.mapEmbedUrl && formData.mapEmbedUrl.includes('google.com/maps/embed');
+  // Safe validity checking for Google maps
+  const isValidEmbed = formData.mapEmbedUrl && formData.mapEmbedUrl.startsWith('https://www.google.com/maps/embed');
+
+  if (loading) {
+    return (
+      <div className="manage-about-container">
+        <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>
+          Loading Contact & Location settings...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="manage-about-container"> {/* Using existing parent class for shared layout styles */}
       
+      {errorMsg && (
+        <div style={{ backgroundColor: 'rgba(225,29,72,0.08)', color: '#E11D48', padding: '12px 16px', borderRadius: '6px', marginBottom: '20px', fontWeight: '600', fontSize: '13px' }}>
+          ⚠ {errorMsg}
+        </div>
+      )}
+
       {/* 1. BUSINESS INFORMATION */}
       <div className="manage-section-card">
         <h3>Business Information</h3>
+        <p style={{fontSize: '12px', color: '#6B7280', marginBottom: '16px'}}>Note: Business Hours are automatically derived from your active Booking Rules schedule.</p>
         <div className="settings-form-grid cols-1">
           <div className="settings-form-group">
             <label>LOCATION NAME</label>
@@ -67,6 +148,7 @@ export default function AdminContactLocationSettings() {
               value={formData.locationName} 
               onChange={handleChange} 
               placeholder="e.g. VehicleCare Headquarters"
+              disabled={isSubmitting}
             />
             {errors.locationName && <span style={{color: '#ff107a', fontSize: '12px'}}>{errors.locationName}</span>}
           </div>
@@ -78,6 +160,7 @@ export default function AdminContactLocationSettings() {
               value={formData.address} 
               onChange={handleChange} 
               placeholder="e.g. 123 Engine Street, NY 10001"
+              disabled={isSubmitting}
             />
             {errors.address && <span style={{color: '#ff107a', fontSize: '12px'}}>{errors.address}</span>}
           </div>
@@ -92,6 +175,7 @@ export default function AdminContactLocationSettings() {
               value={formData.phone} 
               onChange={handleChange} 
               placeholder="e.g. +1 234 567 8900"
+              disabled={isSubmitting}
             />
             {errors.phone && <span style={{color: '#ff107a', fontSize: '12px'}}>{errors.phone}</span>}
           </div>
@@ -103,26 +187,7 @@ export default function AdminContactLocationSettings() {
               value={formData.email} 
               onChange={handleChange} 
               placeholder="e.g. support@vehiclecare.com"
-            />
-          </div>
-          <div className="settings-form-group">
-            <label>SUPPORT DAYS</label>
-            <input 
-              type="text" 
-              name="supportDays" 
-              value={formData.supportDays} 
-              onChange={handleChange} 
-              placeholder="e.g. Mon - Sun"
-            />
-          </div>
-          <div className="settings-form-group">
-            <label>BUSINESS HOURS</label>
-            <input 
-              type="text" 
-              name="businessHours" 
-              value={formData.businessHours} 
-              onChange={handleChange} 
-              placeholder="e.g. 09:00 AM - 05:00 PM"
+              disabled={isSubmitting}
             />
           </div>
         </div>
@@ -140,6 +205,7 @@ export default function AdminContactLocationSettings() {
               value={formData.mapEmbedUrl} 
               onChange={handleChange} 
               placeholder="e.g. https://www.google.com/maps/embed?..."
+              disabled={isSubmitting}
             />
             <p style={{fontSize: '12px', color: '#A89CAE', marginTop: '4px'}}>Paste the Google Maps embed URL used to display the map.</p>
           </div>
@@ -152,6 +218,7 @@ export default function AdminContactLocationSettings() {
               value={formData.directionsUrl} 
               onChange={handleChange} 
               placeholder="e.g. https://maps.google.com/?q=..."
+              disabled={isSubmitting}
             />
             <p style={{fontSize: '12px', color: '#A89CAE', marginTop: '4px'}}>Paste the Google Maps location or directions link.</p>
           </div>
@@ -172,16 +239,16 @@ export default function AdminContactLocationSettings() {
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
             ></iframe>
-          ) : formData.mapEmbedUrl ? (
-            <p style={{color: '#A89CAE', fontSize: '14px'}}>Unable to preview this map.</p>
           ) : (
-            <p style={{color: '#A89CAE', fontSize: '14px'}}>Enter a Google Maps Embed URL to preview the location.</p>
+            <p style={{color: '#A89CAE', fontSize: '14px'}}>Unable to preview this map.</p>
           )}
         </div>
       </div>
 
       <div className="manage-about-footer">
-        <button className="btn-save-changes" onClick={handleSaveChanges}>Save Changes</button>
+        <button className="btn-save-changes" onClick={handleSaveChanges} disabled={isSubmitting}>
+          {isSubmitting ? 'Saving...' : 'Save Changes'}
+        </button>
       </div>
 
       {/* Success Toast */}

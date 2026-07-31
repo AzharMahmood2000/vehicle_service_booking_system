@@ -4,6 +4,7 @@ const {
   createContactRequest,
   getContactRequests,
   updateContactRequestStatus,
+  markContactNotificationRead,
 } = require("../controller/contactrequestcontroller");
 
 const {
@@ -19,5 +20,7 @@ router.post("/", createContactRequest);
 router.get("/", protect, getContactRequests);
  
 router.put("/:id/status", protect, updateContactRequestStatus);
+
+router.put("/:id/notification-read", protect, markContactNotificationRead);
 
 module.exports = router;

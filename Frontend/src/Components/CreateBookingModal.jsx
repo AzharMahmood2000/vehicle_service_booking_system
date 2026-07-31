@@ -1,69 +1,113 @@
 import React, { useState, useEffect } from 'react';
+import API_BASE_URL from '../api';
 
-// Default service categories (fallback if not loaded from categories page)
-const defaultServiceCategories = [
-  { title: 'Full Vehicle Service', active: true },
-  { title: 'Engine Diagnostics', active: true },
-  { title: 'Brake Optimization', active: true },
-  { title: 'General Service', active: true },
-  { title: 'Oil Change', active: true },
-];
+function formatTime12h(time24) {
+  if (!time24) return '';
+  const [hStr, mStr] = time24.split(':');
+  let h = parseInt(hStr, 10);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  if (h === 0) h = 12;
+  else if (h > 12) h -= 12;
+  return `${h}:${mStr} ${suffix}`;
+}
 
 export default function CreateBookingModal({ isOpen, onClose, initialDate, onBookingCreated }) {
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
-  const [isCustomTime, setIsCustomTime] = useState(false);
-  const [customTimeValue, setCustomTimeValue] = useState('');
   const [serviceOptions, setServiceOptions] = useState([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   
   const [formData, setFormData] = useState({
     customerName: "",
     phoneNumber: "",
-    emailAddress: "",
     vehicleNumber: "",
     vehicleModel: "",
-    serviceType: "",
-    preferredDate: "",
-    notes: "",
-    status: "Request Pending",
-    adminNote: ""
+    serviceId: "",
+    preferredDate: ""
   });
+  
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
 
-  // Load active service categories
+  // Load active services
   useEffect(() => {
     if (isOpen) {
-      // Try to load from localStorage (if service categories were saved)
-      const storedCategories = localStorage.getItem('vehiclecare_service_categories');
-      let categories;
-      if (storedCategories) {
+      const fetchServices = async () => {
+        setServicesLoading(true);
         try {
-          categories = JSON.parse(storedCategories).filter(c => c.active);
-        } catch (e) {
-          categories = defaultServiceCategories.filter(c => c.active);
+          const response = await fetch(`${API_BASE_URL}/services`);
+          const data = await response.json();
+          if (response.ok && data.success) {
+            setServiceOptions(data.services);
+            if (data.services.length > 0) {
+              setFormData(prev => ({ ...prev, serviceId: data.services[0]._id }));
+            }
+          }
+        } catch (err) {
+          console.error("Failed to load services:", err);
+        } finally {
+          setServicesLoading(false);
         }
-      } else {
-        categories = defaultServiceCategories.filter(c => c.active);
-      }
-      
-      setServiceOptions(categories);
+      };
 
-      // Reset form
-      setSelectedTimeSlot('');
-      setIsCustomTime(false);
-      setCustomTimeValue('');
-      setFormData({
+      fetchServices();
+      
+      setFormData(prev => ({
+        ...prev,
         customerName: "",
         phoneNumber: "",
-        emailAddress: "",
         vehicleNumber: "",
         vehicleModel: "",
-        serviceType: categories.length > 0 ? categories[0].title : "",
-        preferredDate: initialDate || "",
-        notes: "",
-        status: "Request Pending",
-        adminNote: ""
-      });
+        preferredDate: initialDate || ""
+      }));
+      setSelectedTimeSlot('');
+      setErrorMsg('');
     }
   }, [isOpen, initialDate]);
+
+  // Load available slots dynamically when service or date change
+  useEffect(() => {
+    if (isOpen && formData.serviceId && formData.preferredDate) {
+      const fetchAvailability = async () => {
+        setSlotsLoading(true);
+        setErrorMsg('');
+        setAvailableSlots([]);
+        setSelectedTimeSlot('');
+
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/availability/slots?date=${formData.preferredDate}&serviceId=${formData.serviceId}`
+          );
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Failed to fetch slots.');
+          }
+
+          if (data.closed || data.sameDayBlocked || data.pastDate || data.beyondAdvanceLimit) {
+            setErrorMsg(data.message || 'This date is not available for booking. Please select another date.');
+          } else {
+            const availableOnly = data.slots.filter(slot => slot.available);
+            setAvailableSlots(availableOnly);
+            if (availableOnly.length === 0) {
+              setErrorMsg('No available service capacity left for this date. Please select another time or date.');
+            }
+          }
+        } catch (err) {
+          console.error(err);
+          setErrorMsg(err.message || 'Failed to load availability slots.');
+        } finally {
+          setSlotsLoading(false);
+        }
+      };
+      
+      fetchAvailability();
+    } else {
+      setAvailableSlots([]);
+      setSelectedTimeSlot('');
+    }
+  }, [isOpen, formData.serviceId, formData.preferredDate]);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -82,94 +126,75 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCreateBooking = (e) => {
+  const handleCreateBooking = async (e) => {
     e.preventDefault();
 
     if (!formData.customerName.trim()) {
-      alert("Please enter the customer name.");
+      setErrorMsg("Please enter the customer name.");
       return;
     }
     if (!formData.phoneNumber.trim()) {
-      alert("Please enter the phone number.");
+      setErrorMsg("Please enter the phone number.");
       return;
     }
     if (!formData.vehicleNumber.trim()) {
-      alert("Please enter the vehicle number.");
+      setErrorMsg("Please enter the vehicle number.");
       return;
     }
     if (!formData.vehicleModel.trim()) {
-      alert("Please enter the vehicle model.");
+      setErrorMsg("Please enter the vehicle model.");
       return;
     }
     if (!formData.preferredDate) {
-      alert("Please select a booking date.");
+      setErrorMsg("Please select a booking date.");
       return;
     }
-    if (!selectedTimeSlot && (!isCustomTime || !customTimeValue)) {
-      alert("Please select or enter a booking time.");
+    if (!selectedTimeSlot) {
+      setErrorMsg("Please select an available booking slot.");
       return;
     }
     
-    // Booking Rules Validation
-    const rulesStr = localStorage.getItem('vehiclecare_booking_rules');
-    if (rulesStr) {
-      const rules = JSON.parse(rulesStr);
-      const selectedDate = new Date(formData.preferredDate);
-      selectedDate.setHours(0,0,0,0);
-      
-      const today = new Date();
-      today.setHours(0,0,0,0);
+    setErrorMsg('');
+    setIsSubmitting(true);
 
-      if (selectedDate.getTime() === today.getTime() && !rules.allowSameDay) {
-        alert("Same-day bookings are not allowed. Please select a future date.");
-        return;
-      }
+    try {
+      const response = await fetch(`${API_BASE_URL}/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: formData.customerName.trim(),
+          phoneNumber: formData.phoneNumber.trim(),
+          vehicleNumber: formData.vehicleNumber.trim(),
+          vehicleModel: formData.vehicleModel.trim(),
+          serviceId: formData.serviceId,
+          appointmentDate: formData.preferredDate,
+          startTime: selectedTimeSlot
+        })
+      });
 
-      const daysOfWeekStr = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-      if (rules.closedDays && rules.closedDays.includes(daysOfWeekStr[selectedDate.getDay()])) {
-        alert(`We are closed on this day. Please select another date.`);
-        return;
-      }
+      const data = await response.json();
 
-      const diffDays = Math.ceil((selectedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays > rules.advanceBookingDays) {
-        alert(`You can only book up to ${rules.advanceBookingDays} days in advance.`);
-        return;
-      }
-      if (diffDays < 0) {
-        alert(`Cannot book in the past.`);
+      if (response.status === 409) {
+        setErrorMsg(data.message || 'Cannot accept booking due to capacity constraints. No service bay is available for this time.');
+        setSelectedTimeSlot('');
         return;
       }
 
-      const existingBookings = JSON.parse(localStorage.getItem('vehiclecare_mock_bookings') || '[]');
-      const dateCount = existingBookings.filter(b => b.preferredDate === formData.preferredDate).length;
-      if (dateCount >= rules.maxBookingsPerDay) {
-        alert("Maximum booking capacity has been reached for this date.");
-        return;
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to create booking.');
       }
+
+      if (onBookingCreated) {
+        onBookingCreated(data.booking);
+      }
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message || 'Something went wrong while creating the booking.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const newBooking = { 
-      ...formData, 
-      id: `VSB-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(5, '0')}`,
-      preferredTime: selectedTimeSlot || customTimeValue,
-      createdAt: new Date().toISOString()
-    };
-
-    const existingBookings = JSON.parse(localStorage.getItem('vehiclecare_mock_bookings') || '[]');
-    existingBookings.push(newBooking);
-    localStorage.setItem('vehiclecare_mock_bookings', JSON.stringify(existingBookings));
-
-    // Dispatch global event so calendar and other pages can react
-    window.dispatchEvent(new Event('bookings_updated'));
-
-    if (onBookingCreated) {
-      onBookingCreated(newBooking);
-    }
-    onClose();
   };
-
-  const timeSlots = ['09:00 AM', '10:30 AM', '12:00 PM', '01:30 PM', '03:00 PM', '04:30 PM'];
 
   return (
     <div className="global-modal-overlay" onClick={onClose}>
@@ -179,13 +204,18 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
             <h2>Create New Booking</h2>
             <p>Enter customer and vehicle details for the new service request.</p>
           </div>
-          <button className="global-modal-close" onClick={onClose} type="button">
+          <button className="global-modal-close" onClick={onClose} type="button" disabled={isSubmitting}>
             <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
           </button>
         </div>
         
         <form className="global-modal-form" onSubmit={handleCreateBooking}>
           <div className="booking-form-scrollable">
+            {errorMsg && (
+               <div style={{ backgroundColor: 'rgba(225,29,72,0.1)', color: '#E11D48', padding: '12px', borderRadius: '6px', marginBottom: '16px', fontWeight: 'bold', fontSize: '13px' }}>
+                 ⚠ {errorMsg}
+               </div>
+            )}
             
             {/* 1. CUSTOMER INFORMATION */}
             <div className="form-section">
@@ -193,18 +223,14 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
                 <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                 CUSTOMER INFORMATION
               </h4>
-              <div className="form-grid cols-3">
+              <div className="form-grid cols-2">
                 <div className="form-group">
                   <label>FULL NAME</label>
-                  <input type="text" name="customerName" value={formData.customerName} onChange={handleChange} placeholder="e.g. Isuru Perera" required />
+                  <input type="text" name="customerName" value={formData.customerName} onChange={handleChange} placeholder="e.g. Isuru Perera" required disabled={isSubmitting} />
                 </div>
                 <div className="form-group">
                   <label>PHONE NUMBER</label>
-                  <input type="text" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="078-1234567" required />
-                </div>
-                <div className="form-group">
-                  <label>EMAIL ADDRESS</label>
-                  <input type="email" name="emailAddress" value={formData.emailAddress} onChange={handleChange} placeholder="isuru@example.com" />
+                  <input type="text" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="078-1234567" required disabled={isSubmitting} />
                 </div>
               </div>
             </div>
@@ -218,11 +244,11 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
               <div className="form-grid cols-2">
                 <div className="form-group">
                   <label>VEHICLE NUMBER</label>
-                  <input type="text" name="vehicleNumber" value={formData.vehicleNumber} onChange={handleChange} placeholder="WP CAB-1234" required />
+                  <input type="text" name="vehicleNumber" value={formData.vehicleNumber} onChange={handleChange} placeholder="WP CAB-1234" required disabled={isSubmitting} />
                 </div>
                 <div className="form-group">
                   <label>VEHICLE MODEL</label>
-                  <input type="text" name="vehicleModel" value={formData.vehicleModel} onChange={handleChange} placeholder="Porsche 911 GT3" required />
+                  <input type="text" name="vehicleModel" value={formData.vehicleModel} onChange={handleChange} placeholder="Porsche 911 GT3" required disabled={isSubmitting} />
                 </div>
               </div>
             </div>
@@ -236,15 +262,12 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
                 </h4>
                 <div className="form-group">
                   <label>SERVICE TYPE</label>
-                  <select name="serviceType" value={formData.serviceType} onChange={handleChange} required>
-                    {serviceOptions.map((svc, idx) => (
-                      <option key={idx} value={svc.title}>{svc.title}</option>
+                  <select name="serviceId" value={formData.serviceId} onChange={handleChange} required disabled={isSubmitting || servicesLoading}>
+                    {servicesLoading ? <option value="">Loading services...</option> : null}
+                    {serviceOptions.map((svc) => (
+                      <option key={svc._id} value={svc._id}>{svc.title}</option>
                     ))}
                   </select>
-                </div>
-                <div className="form-group" style={{ marginTop: '16px' }}>
-                  <label>NOTES</label>
-                  <textarea name="notes" value={formData.notes} onChange={handleChange} placeholder="Mention any specific issues or special requests..." rows="4"></textarea>
                 </div>
               </div>
 
@@ -255,72 +278,47 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
                 </h4>
                 <div className="form-group">
                   <label>DATE</label>
-                  <input type="date" name="preferredDate" value={formData.preferredDate} onChange={handleChange} required />
+                  <input type="date" name="preferredDate" value={formData.preferredDate} onChange={handleChange} required min={new Date().toISOString().split('T')[0]} disabled={isSubmitting} />
                 </div>
                 <div className="form-group" style={{ marginTop: '16px' }}>
-                  <label>TIME SLOT</label>
-                  <div className="time-slot-grid" style={{ marginBottom: isCustomTime ? '16px' : '0' }}>
-                    {timeSlots.map(time => (
-                      <div 
-                        key={time}
-                        className={`time-pill ${selectedTimeSlot === time && !isCustomTime ? 'active' : ''}`}
-                        onClick={() => {
-                          setSelectedTimeSlot(time);
-                          setIsCustomTime(false);
-                          setCustomTimeValue('');
-                        }}
-                      >
-                        {time}
-                      </div>
-                    ))}
-                    <div 
-                      className={`time-pill custom-time-btn ${isCustomTime ? 'active' : ''}`}
-                      onClick={() => {
-                        setIsCustomTime(true);
-                        setSelectedTimeSlot('');
-                      }}
-                    >
-                      Custom Time
+                  <label>AVAILABLE TIME SLOTS</label>
+                  {slotsLoading ? (
+                    <div style={{ color: '#6A5C7A', fontSize: '12px' }}>Checking availability...</div>
+                  ) : availableSlots.length > 0 ? (
+                    <div className="time-slot-grid" style={{ marginBottom: '0' }}>
+                      {availableSlots.map(slot => (
+                        <div 
+                          key={slot.startTime}
+                          className={`time-pill ${selectedTimeSlot === slot.startTime ? 'active' : ''}`}
+                          onClick={() => !isSubmitting && setSelectedTimeSlot(slot.startTime)}
+                          style={{ cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
+                        >
+                          {formatTime12h(slot.startTime)}
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                  
-                  {isCustomTime && (
-                    <div className="form-group">
-                      <label>CUSTOM TIME</label>
-                      <input 
-                        type="time" 
-                        style={{ padding: '10px 14px' }}
-                        value={customTimeValue} 
-                        onChange={(e) => setCustomTimeValue(e.target.value)} 
-                        required 
-                      />
-                    </div>
+                  ) : formData.serviceId && formData.preferredDate ? (
+                    <div style={{ color: '#E11D48', fontSize: '12px' }}>No availability found.</div>
+                  ) : (
+                    <div style={{ color: '#6A5C7A', fontSize: '12px' }}>Select date to view slots.</div>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* 5. INTERNAL ADMINISTRATION */}
-            <div className="form-section internal-admin-box">
-              <h4 className="section-title">
-                <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            {/* INTERNAL ADMIN NOTE */}
+            <div className="form-section internal-admin-box" style={{ marginTop: '24px', padding: '16px', background: '#F8F7FA', borderRadius: '8px' }}>
+              <h4 className="section-title" style={{ fontSize: '12px', marginBottom: '8px' }}>
+                <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ width: '16px', height: '16px', marginRight: '6px' }}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 INTERNAL ADMINISTRATION
               </h4>
-              <div className="form-grid cols-2">
-                <div className="form-group">
-                  <label>BOOKING STATUS</label>
-                  <select name="status" value={formData.status} onChange={handleChange} required>
-                    <option value="Request Pending">Request Pending</option>
-                    <option value="Under Review">Under Review</option>
-                    <option value="Approved">Approved</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Rejected">Rejected</option>
-                  </select>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <label style={{ fontSize: '10px', color: '#E9E3EC', fontWeight: 'bold', display: 'block' }}>INITIAL STATUS</label>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#0F0519' }}>Request Pending</span>
                 </div>
-                <div className="form-group">
-                  <label>ADMIN NOTE</label>
-                  <input type="text" name="adminNote" value={formData.adminNote} onChange={handleChange} placeholder="Visible to staff only..." />
+                <div style={{ fontSize: '11px', color: '#6A5C7A', fontStyle: 'italic' }}>
+                  Status can be updated manually after creation from Manage Bookings.
                 </div>
               </div>
             </div>
@@ -328,8 +326,10 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
           </div>
           
           <div className="global-modal-footer">
-            <button type="button" className="btn-modal-cancel" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-modal-create">Create Booking</button>
+            <button type="button" className="btn-modal-cancel" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+            <button type="submit" className="btn-modal-create" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating Booking...' : 'Create Booking'}
+            </button>
           </div>
         </form>
       </div>

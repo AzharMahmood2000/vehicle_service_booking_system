@@ -117,8 +117,44 @@ const updateContactRequestStatus = async (req, res) => {
   }
 };
 
+const markContactNotificationRead = async (req, res) => {
+  try {
+    const contactRequest = await ContactRequest.findByIdAndUpdate(
+      req.params.id,
+      { adminNotificationRead: true },
+      { new: true }
+    );
+
+    if (!contactRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Contact request not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification marked as read",
+    });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid contact request ID",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to mark notification as read",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createContactRequest,
   getContactRequests,
   updateContactRequestStatus,
+  markContactNotificationRead,
 };

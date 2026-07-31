@@ -106,6 +106,43 @@ const createBooking = async (req, res) => {
       });
     }
 
+    // Date validation: past dates, same-day, advance booking limit
+    const appointmentDateObj = new Date(`${appointmentDate}T00:00:00`);
+    const todayObj = new Date();
+    todayObj.setHours(0, 0, 0, 0);
+
+    if (appointmentDateObj < todayObj) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot book in the past",
+      });
+    }
+
+    const isSameDay =
+      appointmentDateObj.getTime() === todayObj.getTime();
+
+    if (isSameDay && !bookingRules.allowSameDay) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Same-day bookings are not allowed. Please select a future date.",
+      });
+    }
+
+    if (bookingRules.advanceBookingDays) {
+      const diffDays = Math.round(
+        (appointmentDateObj.getTime() - todayObj.getTime()) /
+          (1000 * 60 * 60 * 24)
+      );
+
+      if (diffDays > bookingRules.advanceBookingDays) {
+        return res.status(400).json({
+          success: false,
+          message: `You can only book up to ${bookingRules.advanceBookingDays} days in advance`,
+        });
+      }
+    }
+
     const startMinutes = timeToMinutes(startTime);
     const openingTime = timeToMinutes(bookingRules.openingTime);
     const closingTime = timeToMinutes(bookingRules.closingTime);
@@ -319,12 +356,18 @@ const updateBookingStatus = async (req, res) => {
 const trackBooking = async (req, res) => {
   try {
     const { identifier } = req.params;
+    const { phone } = req.query;
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is required for tracking",
+      });
+    }
 
     const bookings = await Booking.find({
-      $or: [
-        { referenceNumber: identifier },
-        { phoneNumber: identifier },
-      ],
+      referenceNumber: identifier,
+      phoneNumber: phone
     })
       .populate("serviceId", "title durationMins price")
       .populate("serviceBay", "name status")
@@ -333,7 +376,7 @@ const trackBooking = async (req, res) => {
     if (bookings.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "No booking found",
+        message: "No booking found with this reference and phone number",
       });
     }
 
@@ -351,9 +394,45 @@ const trackBooking = async (req, res) => {
   }
 };
 
+const markBookingNotificationRead = async (req, res) => {
+  try {
+    const booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { adminNotificationRead: true },
+      { new: true }
+    );
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification marked as read",
+    });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking ID",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to mark notification as read",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getBookings,
   createBooking,
   updateBookingStatus,
   trackBooking,
+  markBookingNotificationRead,
 };

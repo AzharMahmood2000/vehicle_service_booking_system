@@ -2,56 +2,89 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../Components/Navbar';
 import Footer from '../../Components/Footer';
+import API_BASE_URL from '../../api';
 import './AboutUs.css';
 
+const defaultAboutData = {
+  hero: {
+    subtitle: 'ABOUT OUR JOURNEY',
+    title: 'Driven by Quality,\nPowered by Trust',
+    description: 'VehicleCare provides reliable, professional, and customer-focused vehicle service solutions that bridge the gap between traditional craftsmanship and modern technology.',
+  },
+  stats: [
+    { id: 1, value: '5000+', label: 'Vehicles Serviced', active: true },
+    { id: 2, value: '25+', label: 'Expert Mechanics', active: true },
+    { id: 3, value: '15+', label: 'Service Categories', active: true },
+    { id: 4, value: '98%', label: 'Customer Satisfaction', active: true },
+  ],
+  missionVision: {
+    missionTitle: 'Our Mission',
+    missionDesc: 'To make professional vehicle maintenance simple, transparent, reliable, and easily accessible. We strip away the complexity of automotive repair, providing a seamless digital-first experience.',
+    visionTitle: 'Our Vision',
+    visionDesc: 'To become a trusted digital platform for modern and efficient vehicle service management, setting the global benchmark for automotive excellence and technological integration.',
+    image: '/assets/images/engine-diagnostics.jpg'
+  },
+  valuesHeader: {
+    subtitle: 'THE VEHICLECARE WAY',
+    title: 'Our Core Values',
+  },
+  values: [
+    { id: 1, title: 'Quality', description: 'We never compromise on the standards of parts and service delivery.', active: true },
+    { id: 2, title: 'Trust', description: 'Building long-term relationships through honesty and transparency.', active: true },
+    { id: 3, title: 'Reliability', description: 'Consistent performance that our customers can count on daily.', active: true },
+    { id: 4, title: 'Professionalism', description: 'Expertise and conduct that exceeds industry expectations.', active: true },
+    { id: 5, title: 'Customer Satisfaction', description: 'Your peace of mind is our ultimate measure of success.', active: true },
+    { id: 6, title: 'Innovation', description: 'Leveraging digital tools to redefine vehicle management.', active: true },
+  ],
+  cta: {
+    heading: 'Ready to experience the difference?',
+    buttonText: 'Book Your Vehicle Service'
+  }
+};
+
 export default function AboutUs() {
-  const [data, setData] = useState({
-    hero: {
-      subtitle: 'ABOUT OUR JOURNEY',
-      title: 'Driven by Quality,\nPowered by Trust',
-      description: 'VehicleCare provides reliable, professional, and customer-focused vehicle service solutions that bridge the gap between traditional craftsmanship and modern technology.',
-    },
-    stats: [
-      { id: 1, value: '5000+', label: 'Vehicles Serviced', active: true },
-      { id: 2, value: '25+', label: 'Expert Mechanics', active: true },
-      { id: 3, value: '15+', label: 'Service Categories', active: true },
-      { id: 4, value: '98%', label: 'Customer Satisfaction', active: true },
-    ],
-    missionVision: {
-      missionTitle: 'Our Mission',
-      missionDesc: 'To make professional vehicle maintenance simple, transparent, reliable, and easily accessible. We strip away the complexity of automotive repair, providing a seamless digital-first experience.',
-      visionTitle: 'Our Vision',
-      visionDesc: 'To become a trusted digital platform for modern and efficient vehicle service management, setting the global benchmark for automotive excellence and technological integration.',
-      image: '/assets/images/engine-diagnostics.jpg'
-    },
-    valuesHeader: {
-      subtitle: 'THE VEHICLECARE WAY',
-      title: 'Our Core Values',
-    },
-    values: [
-      { id: 1, title: 'Quality', description: 'We never compromise on the standards of parts and service delivery.', active: true },
-      { id: 2, title: 'Trust', description: 'Building long-term relationships through honesty and transparency.', active: true },
-      { id: 3, title: 'Reliability', description: 'Consistent performance that our customers can count on daily.', active: true },
-      { id: 4, title: 'Professionalism', description: 'Expertise and conduct that exceeds industry expectations.', active: true },
-      { id: 5, title: 'Customer Satisfaction', description: 'Your peace of mind is our ultimate measure of success.', active: true },
-      { id: 6, title: 'Innovation', description: 'Leveraging digital tools to redefine vehicle management.', active: true },
-    ],
-    cta: {
-      heading: 'Ready to experience the difference?',
-      buttonText: 'Book Your Vehicle Service'
-    }
-  });
+  const [data, setData] = useState(defaultAboutData);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem('vehiclecare_about_us');
-    if (saved) {
+    const fetchAboutData = async () => {
       try {
-        setData(JSON.parse(saved));
-      } catch (e) {
-        console.error('Error parsing about us data', e);
+        setLoading(true);
+        const response = await fetch(`${API_BASE_URL}/settings/about_content`);
+        const result = await response.json();
+        
+        if (response.ok && result.success && result.setting && result.setting.value) {
+          const loadedData = result.setting.value;
+          setData({
+            hero: { ...defaultAboutData.hero, ...loadedData.hero },
+            stats: Array.isArray(loadedData.stats) ? loadedData.stats : defaultAboutData.stats,
+            missionVision: { ...defaultAboutData.missionVision, ...loadedData.missionVision },
+            valuesHeader: { ...defaultAboutData.valuesHeader, ...loadedData.valuesHeader },
+            values: Array.isArray(loadedData.values) ? loadedData.values : defaultAboutData.values,
+            cta: { ...defaultAboutData.cta, ...loadedData.cta }
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load About Us content', err);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+    
+    fetchAboutData();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="about-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Navbar />
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div style={{ color: '#fff' }}>Loading...</div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="about-page">

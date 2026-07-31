@@ -58,9 +58,16 @@
   padding: 12px 16px;
   border-radius: 6px;
   font-size: 13px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   text-align: center;
   font-weight: 600;
+}
+
+.track-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 24px;
 }
 
 .track-form-row {
@@ -78,7 +85,7 @@
 .track-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 
 .track-input-box {
@@ -247,12 +254,12 @@
   }
 }
 
-.info-item {
+.track-result-info-item {
   display: flex;
   flex-direction: column;
 }
 
-.info-label {
+.track-result-info-label {
   display: block;
   font-size: 10px;
   font-weight: bold;
@@ -261,10 +268,12 @@
   margin-bottom: 4px;
 }
 
-.info-value {
+.track-result-info-value {
   font-size: 14px;
   font-weight: 600;
   color: #120F14;
+  opacity: 1;
+  visibility: visible;
   margin: 0;
 }
 

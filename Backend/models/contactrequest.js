@@ -36,6 +36,11 @@ const contactRequestSchema = new mongoose.Schema(
       ],
       default: "PENDING",
     },
+
+    adminNotificationRead: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

@@ -9,13 +9,20 @@ export default function AdminSidebar() {
   const [newRequestCount, setNewRequestCount] = useState(0);
 
   React.useEffect(() => {
-    const updateCount = () => {
-      const stored = localStorage.getItem('vehiclecare_contact_requests');
-      if (stored) {
-        try {
-          const reqs = JSON.parse(stored);
-          setNewRequestCount(reqs.filter((r) => r.status === 'NEW').length);
-        } catch (e) {}
+    const updateCount = async () => {
+      try {
+        const token = localStorage.getItem('vehiclecare_admin_token') || sessionStorage.getItem('vehiclecare_admin_token');
+        if (!token) return;
+        const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+        const res = await fetch(`${API_BASE_URL}/contact`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success && data.contactRequests) {
+          setNewRequestCount(data.contactRequests.filter((r) => r.status === 'PENDING').length);
+        }
+      } catch (e) {
+        console.error("Failed to load request badge count", e);
       }
     };
     updateCount();

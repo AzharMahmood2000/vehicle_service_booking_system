@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
-import { getAdminProfile, updateAdminProfile } from '../../utils/adminProfileStorage';
+import API_BASE_URL from '../../api';
+import { resolveImagePath } from '../../utils/imageResolver';
 import './AdminProfile.css';
 
 export default function AdminProfile() {
@@ -9,11 +10,52 @@ export default function AdminProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const [toastMessage, setToastMessage] = useState('');
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
-    const data = getAdminProfile();
-    setProfile(data);
-    setFormData(data);
+    const fetchProfile = async () => {
+      let currentData = {
+        fullName: 'Admin',
+        email: 'admin@vehiclecare.com',
+        phone: '',
+        profileImage: '',
+        role: 'SYSTEM ADMIN',
+        accessLevel: 'Full Access',
+        primaryAdmin: true
+      };
+
+      const adminStr = localStorage.getItem('vehiclecare_admin') || sessionStorage.getItem('vehiclecare_admin');
+      if (adminStr) {
+        try {
+          const storedAdmin = JSON.parse(adminStr);
+          currentData.fullName = storedAdmin.name || currentData.fullName;
+          currentData.email = storedAdmin.email || currentData.email;
+          currentData.profileImage = storedAdmin.profileImage || '';
+        } catch (e) {}
+      }
+
+      try {
+        const token = localStorage.getItem('vehiclecare_admin_token') || sessionStorage.getItem('vehiclecare_admin_token');
+        if (token) {
+           const res = await fetch(`${API_BASE_URL}/auth/me`, {
+             headers: { 'Authorization': `Bearer ${token}` }
+           });
+           const data = await res.json();
+           if (data.success && data.admin) {
+              currentData.fullName = data.admin.name || currentData.fullName;
+              currentData.email = data.admin.email || currentData.email;
+              currentData.profileImage = data.admin.profileImage || currentData.profileImage;
+           }
+        }
+      } catch (err) {}
+      
+      setProfile(currentData);
+      setFormData(currentData);
+    };
+    fetchProfile();
   }, []);
 
   const handleEditClick = () => {
@@ -31,21 +73,72 @@ export default function AdminProfile() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const updated = updateAdminProfile(formData);
-    setProfile(updated);
     setIsEditing(false);
-    
-    setToastMessage("Profile updated successfully");
+    // Ideally we would send an update request to the backend.
+    setProfile({ ...profile, ...formData });
+    setToastMessage("Profile updated successfully (local simulation)");
     setTimeout(() => setToastMessage(''), 3000);
   };
 
   const handleImageChangeClick = () => {
-     // In a real app, this would open a file picker.
-     // For this frontend demo, we will fake a toast.
-     setToastMessage("Image upload simulation triggered.");
-     setTimeout(() => setToastMessage(''), 3000);
+     if (fileInputRef.current) {
+        fileInputRef.current.click();
+     }
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("File exceeds 5MB limit");
+      setTimeout(() => setUploadError(''), 3000);
+      return;
+    }
+    
+    setUploadError('');
+    setUploadLoading(true);
+
+    try {
+      const token = localStorage.getItem('vehiclecare_admin_token') || sessionStorage.getItem('vehiclecare_admin_token');
+      const formDataUpload = new FormData();
+      formDataUpload.append('image', file);
+
+      const res = await fetch(`${API_BASE_URL}/auth/profile-image`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formDataUpload
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        const updated = { ...profile, profileImage: data.profileImage };
+        // Update local storage object so it works across refreshes
+        const adminStr = localStorage.getItem('vehiclecare_admin');
+        if (adminStr) {
+          try {
+             let parsed = JSON.parse(adminStr);
+             parsed.profileImage = data.profileImage;
+             localStorage.setItem('vehiclecare_admin', JSON.stringify(parsed));
+          } catch(e) {}
+        }
+        setProfile(updated);
+        setFormData(updated);
+        setToastMessage("Profile image updated successfully");
+        setTimeout(() => setToastMessage(''), 3000);
+      } else {
+        setUploadError(data.message || "Failed to upload image");
+        setTimeout(() => setUploadError(''), 3000);
+      }
+    } catch (err) {
+      setUploadError("Network error. Please try again.");
+      setTimeout(() => setUploadError(''), 3000);
+    } finally {
+      setUploadLoading(false);
+      e.target.value = '';
+    }
   };
 
   return (
@@ -63,11 +156,20 @@ export default function AdminProfile() {
           <div className="profile-card-container">
             <div className={`profile-top-section ${isEditing ? 'editing-mode' : ''}`}>
               <div className="profile-avatar-wrapper">
-                <img src={profile.profileImage} alt="Profile" className="profile-avatar-huge" />
+                <img src={resolveImagePath(profile.profileImage || '/assets/images/profile vector.png')} alt="Profile" className="profile-avatar-huge" />
+                {uploadLoading && (
+                   <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     <span style={{ fontSize: '12px', fontWeight: 'bold' }}>Uploading...</span>
+                   </div>
+                )}
                 {isEditing && (
-                  <button type="button" className="edit-avatar-camera-btn" onClick={handleImageChangeClick} title="Update Photo">
-                    <svg fill="currentColor" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                  </button>
+                  <>
+                    <input type="file" ref={fileInputRef} accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleFileChange} />
+                    <button type="button" className="edit-avatar-camera-btn" onClick={handleImageChangeClick} disabled={uploadLoading} title="Update Photo">
+                      <svg fill="currentColor" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    </button>
+                    {uploadError && <div style={{ position: 'absolute', bottom: -20, left: '50%', transform: 'translateX(-50%)', color: '#EF4444', fontSize: '10px', whiteSpace: 'nowrap' }}>{uploadError}</div>}
+                  </>
                 )}
               </div>
               <div className="profile-title-block">

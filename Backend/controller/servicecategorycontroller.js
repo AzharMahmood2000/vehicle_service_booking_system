@@ -207,10 +207,32 @@ const deleteServiceCategory = async (req, res) => {
   }
 };
 
+const uploadServiceImageFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No image file uploaded" });
+    }
+
+    const filePath = `/uploads/services/${req.file.filename}`;
+
+    return res.status(200).json({
+      success: true,
+      image: filePath,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload service image",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getServiceCategories,
   getAllServiceCategories,
   createServiceCategory,
   updateServiceCategory,
   deleteServiceCategory,
+  uploadServiceImageFile,
 };

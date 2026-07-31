@@ -6,11 +6,14 @@ const {
   createServiceCategory,
   updateServiceCategory,
   deleteServiceCategory,
+  uploadServiceImageFile,
 } = require("../controller/ServiceCategorycontroller");
 
 const {
   protect,
 } = require("../middleware/authmiddleware");
+
+const { uploadServiceImage } = require("../middleware/uploadmiddleware");
 
 const router = express.Router();
 
@@ -41,6 +44,13 @@ router.delete(
   "/:id",
   protect,
   deleteServiceCategory
+);
+
+router.post(
+  "/upload-image",
+  protect,
+  uploadServiceImage.single("image"),
+  uploadServiceImageFile
 );
 
 module.exports = router;

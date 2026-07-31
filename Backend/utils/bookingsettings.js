@@ -5,6 +5,8 @@ const DEFAULT_BOOKING_RULES = {
   closingTime: "17:00",
   slotIntervalMins: 30,
   closedDays: [],
+  allowSameDay: false,
+  advanceBookingDays: 30,
 };
 
 const getBookingRules = async () => {
@@ -24,4 +26,5 @@ const getBookingRules = async () => {
 
 module.exports = {
   getBookingRules,
+  DEFAULT_BOOKING_RULES,
 };

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import Navbar from '../../Components/Navbar';
 import Footer from '../../Components/Footer';
-import { getBookingByReference } from '../../utils/bookingStorage';
-import { BOOKING_STATUS } from '../../constants/bookingStatus';
+import API_BASE_URL from '../../api';
 import { Ticket, Phone } from 'lucide-react';
 import './TrackBooking.css';
 
@@ -13,59 +12,121 @@ export default function TrackBooking() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleTrack = (e) => {
+  const handleTrack = async (e) => {
     e.preventDefault();
     setError('');
     setTrackingResult(null);
 
-    if (!refNum.trim()) {
+    const checkRef = refNum.trim();
+    const checkPhone = phone.trim();
+
+    if (!checkRef) {
       setError('Booking Reference Number is required.');
       return;
     }
-    if (!phone.trim()) {
+    if (!checkPhone) {
       setError('Phone Number is required.');
       return;
     }
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const res = await fetch(`${API_BASE_URL}/bookings/track/${encodeURIComponent(checkRef)}?phone=${encodeURIComponent(checkPhone)}`);
+      const data = await res.json();
       
-      let foundBooking = getBookingByReference(refNum.trim());
-
-      // Safe evaluation override for testing
-      if (refNum.trim() === 'VSB-2026-00125') {
-        foundBooking = {
-          referenceNumber: 'VSB-2026-00125',
-          status: 'Pending Review',
-          customerName: 'Kavindu',
-          numberPlate: 'WP CAB-1234',
-          serviceName: 'Full Vehicle Service',
-          appointmentDate: '20 July 2026',
-          startTime: '10:00 AM',
-          phoneNumber: '076-234576'
-        };
+      if (!res.ok) {
+         setError(data.message || 'Booking not found. Please check your reference number and phone number.');
+         setIsLoading(false);
+         return;
       }
 
-      if (foundBooking && foundBooking.phoneNumber === phone.trim()) {
-        const customerFirstName = foundBooking.customerName.split(' ')[0];
-        
-        setTrackingResult({
-          reference: foundBooking.referenceNumber || foundBooking.id,
-          status: foundBooking.status,
-          customer: foundBooking.customerName,
-          vehicle: foundBooking.numberPlate,
-          service: foundBooking.serviceName,
-          date: foundBooking.appointmentDate,
-          time: foundBooking.startTime,
-          location: 'Kandy',
-          message: `"Hi ${customerFirstName}, we have received your booking request. Our service technician is currently reviewing the parts availability for your vehicle. We will confirm your appointment shortly."`
-        });
+      if (data.bookings && data.bookings.length > 0) {
+        // Phone tracking is now secured natively by backend
+        const foundBooking = data.bookings[0];
+
+        if (foundBooking) {
+          const customerFirstName = foundBooking.customerName.split(' ')[0];
+          const bkStatus = foundBooking.status; // e.g., 'REQUEST PENDING', 'APPROVED', etc.
+          
+          let displayStatus = bkStatus;
+          let message = '';
+          
+          switch(bkStatus) {
+            case 'REQUEST PENDING':
+              displayStatus = 'Pending Review';
+              message = `Hi ${customerFirstName}, we have received your booking request. Our service team is reviewing it.`;
+              break;
+            case 'APPROVED':
+              displayStatus = 'Approved';
+              message = 'Your booking has been approved and scheduled.';
+              break;
+            case 'IN PROGRESS':
+              displayStatus = 'In Progress';
+              message = 'Your vehicle service is currently in progress.';
+              break;
+            case 'COMPLETED':
+              displayStatus = 'Completed';
+              message = 'Your vehicle service has been completed.';
+              break;
+            case 'REJECTED':
+              displayStatus = 'Rejected';
+              message = 'Your booking request was not approved. Please contact the service center if you need assistance.';
+              break;
+            case 'CANCELLED':
+              displayStatus = 'Cancelled';
+              message = 'This booking has been cancelled.';
+              break;
+          }
+
+          // Format Date
+          let formattedDate = foundBooking.appointmentDate;
+          if (formattedDate) {
+            const dateObj = new Date(formattedDate.includes('T') ? formattedDate.split('T')[0] : formattedDate);
+            if (!isNaN(dateObj.getDate())) {
+               formattedDate = `${dateObj.getDate()} ${dateObj.toLocaleString('default', { month: 'long' })} ${dateObj.getFullYear()}`;
+            }
+          }
+
+          // Format Time
+          let formattedTime = foundBooking.startTime;
+          if (foundBooking.endTime) {
+            formattedTime = `${foundBooking.startTime} - ${foundBooking.endTime}`;
+          }
+
+          // Format Service & Vehicle
+          const serviceName = foundBooking.serviceId?.title || foundBooking.serviceName || 'Standard Service';
+          const vehicleLabel = foundBooking.vehicleNumber || foundBooking.numberPlate || 'Vehicle';
+
+          // Show Bay if approved, in-progress, or completed
+          let displayBay = null;
+          if (['APPROVED', 'IN PROGRESS', 'COMPLETED'].includes(bkStatus)) {
+            displayBay = foundBooking.serviceBay?.name;
+          }
+
+          setTrackingResult({
+            reference: foundBooking.referenceNumber,
+            statusRaw: bkStatus,
+            statusDisplay: displayStatus,
+            customer: foundBooking.customerName,
+            vehicle: vehicleLabel,
+            service: serviceName,
+            date: formattedDate,
+            time: formattedTime,
+            bay: displayBay,
+            message
+          });
+        } else {
+          setError('Booking not found. Please check your reference number and phone number.');
+        }
       } else {
-        setError('Booking not found. Please check your reference number and phone number.');
+         setError('Booking not found. Please check your reference number and phone number.');
       }
-    }, 1500);
+    } catch(err) {
+      setError('Network error tracking booking. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -141,74 +202,84 @@ export default function TrackBooking() {
                   <h3 className="reference-value">{trackingResult.reference}</h3>
                 </div>
               </div>
-              <div className="status-badge">
-                {trackingResult.status}
+              <div className="status-badge" style={{ backgroundColor: ['REJECTED', 'CANCELLED'].includes(trackingResult.statusRaw) ? '#E11D48' : '#FFD700', color: ['REJECTED', 'CANCELLED'].includes(trackingResult.statusRaw) ? '#FFF' : '#200130' }}>
+                {trackingResult.statusDisplay}
               </div>
             </div>
 
             <div className="result-body">
               <div className="result-info-grid">
-                <div className="info-item">
-                  <span className="info-label">CUSTOMER</span>
-                  <p className="info-value">{trackingResult.customer}</p>
+                <div className="track-result-info-item">
+                  <span className="track-result-info-label">CUSTOMER</span>
+                  <p className="track-result-info-value">{trackingResult.customer}</p>
                 </div>
-                <div className="info-item">
-                  <span className="info-label">VEHICLE</span>
-                  <p className="info-value">{trackingResult.vehicle}</p>
+                <div className="track-result-info-item">
+                  <span className="track-result-info-label">VEHICLE</span>
+                  <p className="track-result-info-value">{trackingResult.vehicle}</p>
                 </div>
-                <div className="info-item">
-                  <span className="info-label">SERVICE</span>
-                  <p className="info-value">{trackingResult.service}</p>
+                <div className="track-result-info-item">
+                  <span className="track-result-info-label">SERVICE</span>
+                  <p className="track-result-info-value">{trackingResult.service}</p>
                 </div>
-                <div className="info-item">
-                  <span className="info-label">DATE</span>
-                  <p className="info-value">{trackingResult.date}</p>
+                <div className="track-result-info-item">
+                  <span className="track-result-info-label">DATE</span>
+                  <p className="track-result-info-value">{trackingResult.date}</p>
                 </div>
-                <div className="info-item">
-                  <span className="info-label">TIME</span>
-                  <p className="info-value">{trackingResult.time}</p>
+                <div className="track-result-info-item">
+                  <span className="track-result-info-label">TIME</span>
+                  <p className="track-result-info-value">{trackingResult.time}</p>
                 </div>
-                <div className="info-item">
-                  <span className="info-label">LOCATION</span>
-                  <p className="info-value">{trackingResult.location}</p>
-                </div>
+                {trackingResult.bay && (
+                  <div className="track-result-info-item">
+                    <span className="track-result-info-label">SERVICE BAY</span>
+                    <p className="track-result-info-value">{trackingResult.bay}</p>
+                  </div>
+                )}
               </div>
 
-              <div className="timeline-container">
-                <div className="timeline-line"></div>
-                <div className="timeline-active-line"></div>
-                {[BOOKING_STATUS.PENDING, 'Pending Review', BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.COMPLETED].map((stepStatus, index, arr) => {
-                  let currentStatusIndex = arr.indexOf(trackingResult.status);
-                  if (currentStatusIndex === -1) {
-                    currentStatusIndex = 1; // Default to 'Pending Review' if status is unexpected
-                  }
-                  
-                  const isCompleted = index < currentStatusIndex || trackingResult.status === BOOKING_STATUS.COMPLETED;
-                  const isActive = index === currentStatusIndex && trackingResult.status !== BOOKING_STATUS.COMPLETED;
-                  
-                  const labelMap = {
-                    [BOOKING_STATUS.PENDING]: 'Submitted',
-                    'Pending Review': 'Pending Review',
-                    [BOOKING_STATUS.IN_PROGRESS]: 'Approved',
-                    [BOOKING_STATUS.COMPLETED]: 'Completed'
-                  };
+              {!['REJECTED', 'CANCELLED'].includes(trackingResult.statusRaw) && (
+                <div className="timeline-container">
+                  <div className="timeline-line"></div>
+                  <div className="timeline-active-line" style={{ 
+                      width: trackingResult.statusRaw === 'COMPLETED' ? '100%' 
+                           : trackingResult.statusRaw === 'IN PROGRESS' ? '66%' 
+                           : trackingResult.statusRaw === 'APPROVED' ? '33%' 
+                           : '0%' 
+                  }}></div>
 
-                  return (
-                    <div className="timeline-step" key={stepStatus}>
-                      <div className={`timeline-node ${isCompleted ? 'node-completed' : ''} ${isActive ? 'node-active' : ''}`}>
-                        {isCompleted && (
-                          <svg fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="node-icon">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path>
-                          </svg>
-                        )}
+                  {['REQUEST PENDING', 'APPROVED', 'IN PROGRESS', 'COMPLETED'].map((stepStatus, index, arr) => {
+                    let currentStatusIndex = arr.indexOf(trackingResult.statusRaw);
+                    if (currentStatusIndex === -1) {
+                      currentStatusIndex = 0; // fallback to starting node just in case
+                    }
+                    
+                    const isCompleted = index < currentStatusIndex || trackingResult.statusRaw === 'COMPLETED';
+                    const isActive = index === currentStatusIndex && trackingResult.statusRaw !== 'COMPLETED';
+                    
+                    const labelMap = {
+                      'REQUEST PENDING': 'Submitted',
+                      'APPROVED': 'Approved',
+                      'IN PROGRESS': 'In Progress',
+                      'COMPLETED': 'Completed'
+                    };
+
+                    return (
+                      <div className="timeline-step" key={stepStatus}>
+                        <div className={`timeline-node ${isCompleted ? 'node-completed' : ''} ${isActive ? 'node-active' : ''}`}>
+                          {isCompleted && (
+                            <svg fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="node-icon">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                          )}
+                        </div>
+                        <span className={`timeline-label ${isCompleted ? 'label-completed' : ''} ${isActive ? 'label-active' : ''}`}>
+                          {labelMap[stepStatus]}
+                        </span>
                       </div>
-                      <span className={`timeline-label ${isCompleted ? 'label-completed' : ''} ${isActive ? 'label-active' : ''}`}>
-                        {labelMap[stepStatus] || stepStatus}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <div className="message-box">
                 <div className="message-icon">

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
 // Important: do NOT remove the bookingStorage file, but we remove the imports for it.
@@ -15,6 +16,9 @@ const STATUS_LIST = [
 ];
 
 export default function AdminManageBookings() {
+  const [searchParams] = useSearchParams();
+  const targetRef = searchParams.get('ref');
+
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
@@ -65,6 +69,34 @@ export default function AdminManageBookings() {
       setIsLoading(false);
     }
   };
+
+  const [highlightedBooking, setHighlightedBooking] = useState(null);
+
+  // Deep linking for target reference focus
+  useEffect(() => {
+    if (!isLoading && bookings.length > 0 && targetRef) {
+      const el = document.getElementById(`booking-row-${targetRef}`);
+      if (el) {
+        // Ensure the active tab allows viewing this (e.g. switch to All Bookings if it's hidden)
+        const theBooking = bookings.find(b => b.referenceNumber === targetRef);
+        if (theBooking) {
+          if (activeTab !== 'All Bookings' && activeTab !== 'Request Pending' && theBooking.status === BOOKING_STATUS.PENDING) {
+            setActiveTab('All Bookings');
+          }
+        }
+        
+        // Wait a tick for renders if tab changed
+        setTimeout(() => {
+          const rowNow = document.getElementById(`booking-row-${targetRef}`);
+          if (rowNow) {
+            rowNow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setHighlightedBooking(targetRef);
+            setTimeout(() => setHighlightedBooking(null), 3000);
+          }
+        }, 100);
+      }
+    }
+  }, [isLoading, bookings.length, targetRef, activeTab]);
 
   // Close status dropdown if clicking anywhere else or pressing Escape
   useEffect(() => {
@@ -313,7 +345,11 @@ export default function AdminManageBookings() {
                 </thead>
                 <tbody>
                   {!isLoading && filteredBookings.map((booking) => (
-                    <tr key={booking._id} className={openStatusMenu === booking._id ? 'menu-open' : ''}>
+                    <tr 
+                      key={booking._id} 
+                      id={`booking-row-${booking.referenceNumber}`}
+                      className={`${openStatusMenu === booking._id ? 'menu-open' : ''} ${highlightedBooking === booking.referenceNumber ? 'highlight-row' : ''}`}
+                    >
                       <td><strong>{booking.referenceNumber}</strong></td>
                       <td>
                         <span className="plate-badge yellow-plate">{booking.vehicleNumber || booking.numberPlate}</span>

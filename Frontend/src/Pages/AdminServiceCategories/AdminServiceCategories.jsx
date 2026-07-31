@@ -1,57 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
 import API_BASE_URL from '../../api';
+import { resolveImagePath } from '../../utils/imageResolver';
 import './AdminServiceCategories.css';
 
-const mockCategories = [
-  {
-    id: 1,
-    title: 'Full Vehicle Service',
-    description: 'Complete 120-point inspection covering engine, transmission,...',
-    duration: '120 mins',
-    price: 'Rs 25000.00',
-    category: 'Maintenance',
-    tag: 'PREMIUM CARE',
-    image: '/assets/images/oil-change.jpg',
-    active: true,
-    hasLinkedBookings: true,
-  },
-  {
-    id: 2,
-    title: 'Engine Diagnostics',
-    description: 'High-precision sensor calibration and ECU mapping to optimize fuel...',
-    duration: '45 mins',
-    price: 'Rs 45000.00',
-    category: 'Diagnostics',
-    tag: 'PERFORMANCE',
-    image: '/assets/images/engine-diagnostics.jpg',
-    active: true,
-    hasLinkedBookings: true,
-  },
-  {
-    id: 3,
-    title: 'Brake Optimization',
-    description: 'Complete replacement or resurfacing of performance brake systems with...',
-    duration: '90 mins',
-    price: 'Rs 5500.00',
-    category: 'Repairs',
-    tag: 'SAFETY',
-    image: '/assets/images/brake-service.jpg',
-    active: true,
-  },
-  {
-    id: 4,
-    title: 'Detailing & Polish',
-    description: '3-stage paint correction followed by ceramic coating application for...',
-    duration: '360 mins',
-    price: 'Rs 30000.00',
-    category: 'Maintenance',
-    tag: 'OFFLINE',
-    image: '/assets/images/car-wash.jpg',
-    active: false,
-  }
-];
+const mockCategories = [];
 
 export default function AdminServiceCategories() {
   const [categories, setCategories] = useState(mockCategories);
@@ -61,6 +15,10 @@ export default function AdminServiceCategories() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingServiceId, setDeletingServiceId] = useState(null);
   const [editingServiceId, setEditingServiceId] = useState(null);
+
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
+  const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -196,6 +154,9 @@ export default function AdminServiceCategories() {
 
   const handleOpenCreateModal = () => {
     setEditingServiceId(null);
+    setImageFile(null);
+    setImagePreviewUrl('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
 
     setFormData({
       title: '',
@@ -212,6 +173,9 @@ export default function AdminServiceCategories() {
 
   const handleOpenEditModal = (service) => {
     setEditingServiceId(service.id);
+    setImageFile(null);
+    setImagePreviewUrl('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
 
     setFormData({
       title: service.title,
@@ -230,6 +194,43 @@ export default function AdminServiceCategories() {
     setIsModalOpen(false);
   };
 
+  const handleImageAreaClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size exceeds 5MB limit");
+        e.target.value = '';
+        return;
+      }
+      setImageFile(file);
+      setImagePreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const uploadServiceImage = async (token, file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    const res = await fetch(`${API_BASE_URL}/services/upload-image`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Image upload failed');
+    }
+    return data.image; // e.g. /uploads/services/file.jpg
+  };
+
   const handleCreateOrUpdateService = async (e) => {
     e.preventDefault();
 
@@ -242,8 +243,23 @@ export default function AdminServiceCategories() {
       return;
     }
 
-    if (editingServiceId !== null) {
-      try {
+    try {
+      let finalImagePath = formData.image;
+      if (imageFile) {
+        finalImagePath = await uploadServiceImage(token, imageFile);
+      }
+
+      const bodyData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        durationMins: Number(formData.duration),
+        price: Number(formData.price),
+        category: formData.category,
+        image: finalImagePath,
+        active: formData.active
+      };
+
+      if (editingServiceId !== null) {
         const response = await fetch(
           `${API_BASE_URL}/services/${editingServiceId}`,
           {
@@ -252,15 +268,7 @@ export default function AdminServiceCategories() {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`
             },
-            body: JSON.stringify({
-              title: formData.title.trim(),
-              description: formData.description.trim(),
-              durationMins: Number(formData.duration),
-              price: Number(formData.price),
-              category: formData.category,
-              image: formData.image,
-              active: formData.active
-            })
+            body: JSON.stringify(bodyData)
           }
         );
 
@@ -312,86 +320,69 @@ export default function AdminServiceCategories() {
         setTimeout(() => {
           setShowToast(false);
         }, 3000);
-      } catch (error) {
-        console.error(
-          'Failed to update service:',
-          error
+      } else {
+        const response = await fetch(
+          `${API_BASE_URL}/services`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(bodyData)
+          }
         );
-      }
 
-      return;
-    }
+        const data = await response.json();
 
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/services`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            title: formData.title.trim(),
-            description: formData.description.trim(),
-            durationMins: Number(formData.duration),
-            price: Number(formData.price),
-            category: formData.category,
-            image: formData.image,
-            active: formData.active
-          })
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.message || 'Failed to create service'
+          );
         }
-      );
 
-      const data = await response.json();
+        const createdService = data.service;
 
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || 'Failed to create service'
-        );
+        const newService = {
+          id: createdService._id,
+          title: createdService.title,
+          description: createdService.description,
+          duration: `${createdService.durationMins} mins`,
+          price: `Rs ${Number(
+            createdService.price
+          ).toLocaleString('en-GB', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          })}`,
+          category:
+            createdService.category ||
+            'Maintenance',
+          tag:
+            createdService.tag ||
+            createdService.category?.toUpperCase() ||
+            'MAINTENANCE',
+          image:
+            createdService.image ||
+            '/assets/images/oil-change.jpg',
+          active: createdService.active
+        };
+
+        setCategories((currentCategories) => [
+          newService,
+          ...currentCategories
+        ]);
+
+        setToastMode('create');
+        setIsModalOpen(false);
+        setShowToast(true);
+
+        setTimeout(() => {
+          setShowToast(false);
+        }, 3000);
       }
-
-      const createdService = data.service;
-
-      const newService = {
-        id: createdService._id,
-        title: createdService.title,
-        description: createdService.description,
-        duration: `${createdService.durationMins} mins`,
-        price: `Rs ${Number(
-          createdService.price
-        ).toLocaleString('en-GB', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        })}`,
-        category:
-          createdService.category ||
-          'Maintenance',
-        tag:
-          createdService.tag ||
-          createdService.category?.toUpperCase() ||
-          'MAINTENANCE',
-        image:
-          createdService.image ||
-          '/assets/images/oil-change.jpg',
-        active: createdService.active
-      };
-
-      setCategories((currentCategories) => [
-        newService,
-        ...currentCategories
-      ]);
-
-      setToastMode('create');
-      setIsModalOpen(false);
-      setShowToast(true);
-
-      setTimeout(() => {
-        setShowToast(false);
-      }, 3000);
     } catch (error) {
       console.error(
-        'Failed to create service:',
+        'Failed to process service:',
         error
       );
     }
@@ -538,7 +529,7 @@ export default function AdminServiceCategories() {
                 <div
                   className="service-card-image"
                   style={{
-                    backgroundImage: `url(${cat.image})`
+                    backgroundImage: `url(${resolveImagePath(cat.image)})`
                   }}
                 >
                   <div className="service-card-overlay">
@@ -831,22 +822,28 @@ export default function AdminServiceCategories() {
               <div className="form-group">
                 <label>SERVICE IMAGE</label>
 
+                <input type="file" ref={fileInputRef} onChange={handleImageFileChange} style={{display: 'none'}} accept="image/jpeg,image/png,image/webp"/>
+
                 <div
                   className="image-upload-area"
+                  onClick={handleImageAreaClick}
                   style={
-                    formData.image &&
-                    editingServiceId
+                    (imagePreviewUrl || formData.image) && editingServiceId
                       ? {
-                          backgroundImage: `url(${formData.image})`,
+                          backgroundImage: `url(${imagePreviewUrl || resolveImagePath(formData.image)})`,
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',
                           borderColor: 'transparent'
                         }
-                      : {}
+                      : imagePreviewUrl ? {
+                          backgroundImage: `url(${imagePreviewUrl})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          borderColor: 'transparent'
+                        } : {}
                   }
                 >
-                  {!formData.image ||
-                  !editingServiceId ? (
+                  {!imagePreviewUrl && (!formData.image || !editingServiceId) ? (
                     <>
                       <svg
                         fill="none"

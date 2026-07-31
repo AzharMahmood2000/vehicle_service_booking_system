@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import API_BASE_URL from '../../api';
 
 export default function AdminSecuritySettings() {
   const [formData, setFormData] = useState({
@@ -13,15 +14,21 @@ export default function AdminSecuritySettings() {
   
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const getToken = () => {
+    return localStorage.getItem('vehiclecare_admin_token') ||
+      sessionStorage.getItem('vehiclecare_admin_token');
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(p => ({ ...p, [name]: value }));
-    setErrorMsg(''); // Clear error on tying
+    setErrorMsg(''); // Clear error on typing
     setSuccessMsg('');
   };
 
-  const handleUpdatePassword = (e) => {
+  const handleUpdatePassword = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -46,13 +53,52 @@ export default function AdminSecuritySettings() {
       return;
     }
 
-    // Since we don't have a backend to actually verify the password, we simulate it
-    setSuccessMsg('Password updated successfully.');
-    setFormData({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    });
+    setIsSubmitting(true);
+
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('Your session has expired. Please log in again.');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: formData.currentPassword,
+          newPassword: formData.newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.status === 401) {
+        throw new Error('Your session has expired. Please log in again.');
+      }
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Unable to update password. Please try again.');
+      }
+
+      setSuccessMsg('Password updated successfully.');
+      
+      // Clear forms and toggles upon success
+      setFormData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+      setShowCurrent(false);
+      setShowNew(false);
+      setShowConfirm(false);
+    } catch (err) {
+      setErrorMsg(err.message || 'Unable to update password. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -62,12 +108,12 @@ export default function AdminSecuritySettings() {
       </div>
 
       {errorMsg && (
-        <div style={{ color: '#EF4444', backgroundColor: '#FEE2E2', padding: '12px', borderRadius: '6px', fontSize: '14px', fontWeight: '500' }}>
+        <div style={{ color: '#EF4444', backgroundColor: '#FEE2E2', padding: '12px', borderRadius: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '24px' }}>
           {errorMsg}
         </div>
       )}
       {successMsg && (
-        <div style={{ color: '#10B981', backgroundColor: '#D1FAE5', padding: '12px', borderRadius: '6px', fontSize: '14px', fontWeight: '500' }}>
+        <div style={{ color: '#10B981', backgroundColor: '#D1FAE5', padding: '12px', borderRadius: '6px', fontSize: '14px', fontWeight: '500', marginBottom: '24px' }}>
           {successMsg}
         </div>
       )}
@@ -84,12 +130,14 @@ export default function AdminSecuritySettings() {
               onChange={handleChange} 
               placeholder="Enter current password"
               required 
+              disabled={isSubmitting}
               style={{ width: '100%', boxSizing: 'border-box', paddingRight: '40px' }}
             />
             <button 
               type="button" 
-              onClick={() => setShowCurrent(!showCurrent)}
-              style={{ position: 'absolute', right: '12px', top: '34px', background: 'transparent', border: 'none', color: '#6B7280', cursor: 'pointer' }}
+              onClick={() => !isSubmitting && setShowCurrent(!showCurrent)}
+              disabled={isSubmitting}
+              style={{ position: 'absolute', right: '12px', top: '34px', background: 'transparent', border: 'none', color: '#6B7280', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
             >
               {showCurrent ? (
                 <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
@@ -108,12 +156,14 @@ export default function AdminSecuritySettings() {
               onChange={handleChange} 
               placeholder="Min. 8 characters"
               required 
+              disabled={isSubmitting}
               style={{ width: '100%', boxSizing: 'border-box', paddingRight: '40px' }}
             />
             <button 
               type="button" 
-              onClick={() => setShowNew(!showNew)}
-              style={{ position: 'absolute', right: '12px', top: '34px', background: 'transparent', border: 'none', color: '#6B7280', cursor: 'pointer' }}
+              onClick={() => !isSubmitting && setShowNew(!showNew)}
+              disabled={isSubmitting}
+              style={{ position: 'absolute', right: '12px', top: '34px', background: 'transparent', border: 'none', color: '#6B7280', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
             >
               {showNew ? (
                 <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
@@ -132,12 +182,14 @@ export default function AdminSecuritySettings() {
               onChange={handleChange} 
               placeholder="Re-enter new password"
               required 
+              disabled={isSubmitting}
               style={{ width: '100%', boxSizing: 'border-box', paddingRight: '40px' }}
             />
             <button 
               type="button" 
-              onClick={() => setShowConfirm(!showConfirm)}
-              style={{ position: 'absolute', right: '12px', top: '34px', background: 'transparent', border: 'none', color: '#6B7280', cursor: 'pointer' }}
+              onClick={() => !isSubmitting && setShowConfirm(!showConfirm)}
+              disabled={isSubmitting}
+              style={{ position: 'absolute', right: '12px', top: '34px', background: 'transparent', border: 'none', color: '#6B7280', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
             >
               {showConfirm ? (
                 <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
@@ -149,7 +201,9 @@ export default function AdminSecuritySettings() {
         </div>
 
         <div className="settings-form-actions" style={{ maxWidth: '500px' }}>
-          <button className="btn-save-changes" type="submit">Update Password</button>
+          <button className="btn-save-changes" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Updating...' : 'Update Password'}
+          </button>
         </div>
       </form>
     </div>

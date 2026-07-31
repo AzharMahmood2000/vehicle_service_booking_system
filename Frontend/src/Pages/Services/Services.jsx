@@ -4,6 +4,7 @@ import Navbar from '../../Components/Navbar';
 import Footer from '../../Components/Footer';
 import ServiceDetailsModal from '../../Components/ServiceDetailsModal';
 import API_BASE_URL from '../../api';
+import { resolveImagePath } from '../../utils/imageResolver';
 import './Services.css';
 
 const allServices = [
@@ -303,7 +304,7 @@ export default function Services() {
               </span>
 
               <img
-                src={service.image}
+                src={resolveImagePath(service.image)}
                 alt={service.title}
                 className="service-img"
               />

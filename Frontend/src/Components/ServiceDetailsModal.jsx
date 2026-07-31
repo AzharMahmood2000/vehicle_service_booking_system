@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { resolveImagePath } from '../utils/imageResolver';
 
 const ServiceDetailsModal = ({ service, onClose }) => {
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ const ServiceDetailsModal = ({ service, onClose }) => {
       <div className="bg-white w-[min(85vw,800px)] max-h-[85vh] overflow-y-auto overscroll-contain rounded-[16px] [animation:modalPopIn_0.3s_cubic-bezier(0.16,1,0.3,1)]" onClick={e => e.stopPropagation()}>
         
         <div className="relative h-[220px] max-[600px]:h-[180px] w-full bg-[linear-gradient(180deg,rgba(20,8,33,0)_0%,rgba(20,8,33,0.4)_100%)] after:content-[''] after:absolute after:inset-0 after:bg-[rgba(121,28,148,0.2)] after:pointer-events-none">
-          <img src={service.image} alt={service.title} className="w-full h-full object-cover mix-blend-overlay" />
+          <img src={resolveImagePath(service.image)} alt={service.title} className="w-full h-full object-cover mix-blend-overlay" />
           <div className="absolute top-[16px] left-[16px] bg-[#FFFFFF] text-[#140821] text-[11px] font-[800] px-[12px] py-[6px] rounded-[20px] tracking-[0.5px] z-[2]">AVAILABLE</div>
           <button className="absolute top-[16px] right-[16px] w-[28px] h-[28px] bg-[rgba(255,255,255,0.8)] border-none rounded-full flex justify-center items-center cursor-pointer z-[2] text-[#140821] transition-colors duration-200 hover:bg-[#FFFFFF]" onClick={onClose}>
             <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-[14px] h-[14px]">

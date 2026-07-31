@@ -88,6 +88,11 @@ const bookingSchema = new mongoose.Schema(
       ],
       default: "REQUEST PENDING",
     },
+
+    adminNotificationRead: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

@@ -79,6 +79,70 @@ const getAvailableSlots = async (req, res) => {
       });
     }
 
+    // Date validation: past dates, same-day, advance booking limit
+    const appointmentDateObj = new Date(`${date}T00:00:00`);
+    const todayObj = new Date();
+    todayObj.setHours(0, 0, 0, 0);
+
+    if (appointmentDateObj < todayObj) {
+      return res.status(200).json({
+        success: true,
+        date,
+        service: {
+          id: service._id,
+          title: service.title,
+          durationMins: service.durationMins,
+        },
+        closed: false,
+        pastDate: true,
+        slots: [],
+        message: "Cannot view availability for past dates",
+      });
+    }
+
+    const isSameDay =
+      appointmentDateObj.getTime() === todayObj.getTime();
+
+    if (isSameDay && !bookingRules.allowSameDay) {
+      return res.status(200).json({
+        success: true,
+        date,
+        service: {
+          id: service._id,
+          title: service.title,
+          durationMins: service.durationMins,
+        },
+        closed: false,
+        sameDayBlocked: true,
+        slots: [],
+        message:
+          "Same-day bookings are not allowed. Please select a future date.",
+      });
+    }
+
+    if (bookingRules.advanceBookingDays) {
+      const diffDays = Math.round(
+        (appointmentDateObj.getTime() - todayObj.getTime()) /
+          (1000 * 60 * 60 * 24)
+      );
+
+      if (diffDays > bookingRules.advanceBookingDays) {
+        return res.status(200).json({
+          success: true,
+          date,
+          service: {
+            id: service._id,
+            title: service.title,
+            durationMins: service.durationMins,
+          },
+          closed: false,
+          beyondAdvanceLimit: true,
+          slots: [],
+          message: `You can only book up to ${bookingRules.advanceBookingDays} days in advance`,
+        });
+      }
+    }
+
     const openingMinutes = timeToMinutes(
       bookingRules.openingTime
     );
