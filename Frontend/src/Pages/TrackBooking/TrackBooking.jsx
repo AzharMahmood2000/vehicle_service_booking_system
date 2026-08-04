@@ -122,7 +122,7 @@ export default function TrackBooking() {
       } else {
          setError('Booking not found. Please check your reference number and phone number.');
       }
-    } catch(err) {
+    } catch {
       setError('Network error tracking booking. Please try again later.');
     } finally {
       setIsLoading(false);

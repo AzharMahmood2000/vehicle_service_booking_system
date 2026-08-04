@@ -213,6 +213,41 @@ export default function AdminManageBookings() {
     }
   };
 
+  const handleDeleteBooking = async (bookingId) => {
+    const confirmDelete = window.confirm("Permanently delete this rejected booking?");
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem('vehiclecare_admin_token') || sessionStorage.getItem('vehiclecare_admin_token');
+      if (!token) {
+        alert("Authentication required. Please log in again.");
+        return;
+      }
+      
+      const res = await fetch(`${API_BASE_URL}/bookings/${bookingId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        alert(data.message || "Failed to delete booking.");
+        return;
+      }
+
+      setBookings(prev => prev.filter(b => b._id !== bookingId));
+      if (openStatusMenu === bookingId) {
+        setOpenStatusMenu(null);
+      }
+      alert(data.message || "Rejected booking deleted successfully.");
+    } catch (err) {
+      console.error("Delete booking error:", err);
+      alert("Network error. Unable to delete booking.");
+    }
+  };
+
   const getStatusClass = (statusStr) => {
     return BOOKING_STATUS_CONFIG[statusStr]?.cssClass || 'status-req-pending';
   };
@@ -380,6 +415,20 @@ export default function AdminManageBookings() {
                           >
                             <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
                           </button>
+                          {booking.status === BOOKING_STATUS.REJECTED && (
+                            <button
+                              type="button"
+                              className="delete-booking-btn"
+                              aria-label={`Delete rejected booking ${booking.referenceNumber}`}
+                              title="Delete rejected booking"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteBooking(booking._id);
+                              }}
+                            >
+                              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12M8 9h8v10H8V9m7.5-5l-1-1h-5l-1 1H5v2h14V4h-3.5z"/></svg>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

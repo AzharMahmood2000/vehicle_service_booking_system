@@ -7,6 +7,8 @@ import AboutUs from './Pages/AboutUs/AboutUs';
 import Services from './Pages/Services/Services';
 import TrackBooking from './Pages/TrackBooking/TrackBooking';
 import AdminLogin from './Pages/AdminLogin/AdminLogin';
+import AdminForgotPassword from './Pages/AdminForgotPassword/AdminForgotPassword';
+import AdminResetPassword from './Pages/AdminResetPassword/AdminResetPassword';
 import AdminDashboard from './Pages/AdminDashboard/AdminDashboard';
 import AdminManageBookings from './Pages/AdminManageBookings/AdminManageBookings';
 import AdminContactRequests from './Pages/AdminContactRequests/AdminContactRequests';
@@ -26,6 +28,8 @@ function App() {
         <Route path="/booking-success" element={<BookingSuccess />} />
         <Route path="/track-booking" element={<TrackBooking />} />
         <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/admin-forgot-password" element={<AdminForgotPassword />} />
+        <Route path="/admin-reset-password" element={<AdminResetPassword />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/bookings" element={<AdminManageBookings />} />
         <Route path="/admin/requests" element={<AdminContactRequests />} />

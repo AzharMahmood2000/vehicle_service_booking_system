@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   FaUser,
   FaLock,
@@ -185,7 +185,7 @@ export default function AdminLogin() {
                 className="admin-form"
               >
                 <div className="form-group">
-                  <label>Username or Email</label>
+                  <label>Email address</label>
 
                   <div className="admin-login-input-wrapper">
                     <FaUser className="admin-login-left-icon" />
@@ -239,12 +239,12 @@ export default function AdminLogin() {
                   </div>
 
                   <div className="forgot-password-footer">
-                    <a
-                      href="#"
+                    <Link
+                      to="/admin-forgot-password"
                       className="forgot-link"
                     >
                       Forgot password?
-                    </a>
+                    </Link>
                   </div>
                 </div>
 

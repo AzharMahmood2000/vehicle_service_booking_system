@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import ServiceDetailsModal from '../../Components/ServiceDetailsModal';
 import Navbar from '../../Components/Navbar';
 import Footer from '../../Components/Footer';

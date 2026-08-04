@@ -146,7 +146,7 @@ export default function AdminContactRequests() {
       }
       setStatusDropdownOpen(false);
       window.dispatchEvent(new Event('contact_requests_updated'));
-    } catch (err) {
+    } catch {
       alert('Network error when updating status.');
     } finally {
       setIsUpdating(false);

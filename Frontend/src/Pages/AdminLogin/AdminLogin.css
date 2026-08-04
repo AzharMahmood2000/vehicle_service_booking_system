@@ -159,83 +159,90 @@
 }
 
 .login-card h2 {
-  font-size: 24px;
-  font-weight: 800;
+  font-size: 30px;
+  font-weight: 700;
   color: #140821;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .login-subtitle {
-  font-size: 13px;
+  font-size: 14px;
   color: #726B7A;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
+  font-weight: 400;
 }
 
-.admin-form {
+.admin-login-layout .admin-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
-.form-group {
+.admin-login-layout .form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-bottom: 0; /* Override any global margins */
 }
 
-.form-group label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #140821;
+.admin-login-layout .form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2A2130;
+  letter-spacing: 0;
+  text-transform: none;
+  margin-bottom: 0; /* Override global label margins */
 }
 
-.forgot-password-footer {
+.admin-login-layout .forgot-password-footer {
   display: flex;
   justify-content: flex-end;
-  margin-top: -2px; /* Pull it slightly upward closer to the input */
+  margin-top: 2px; /* Pull it slightly upward closer to the input, gap target 8-10px from input bottom usually covered by flex gap or inner spacing */
 }
 
-.forgot-link {
-  font-size: 11px;
+.admin-login-layout .forgot-link {
+  font-size: 13px;
   font-weight: 600;
   color: var(--primary-pink);
   text-decoration: none;
 }
 
-.admin-login-input-wrapper {
+.admin-login-layout .admin-login-input-wrapper {
   position: relative;
   width: 100%;
 }
 
-.admin-login-input-wrapper input {
+.admin-login-layout .admin-login-input-wrapper input {
   width: 100%;
   box-sizing: border-box;
-  padding: 14px 18px 14px 64px !important;
+  padding: 14px 18px 14px 48px !important; /* Adjusted left padding to fit icon cleanly */
   border: 1px solid #E5E0EA;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
   color: #140821;
   background: #FFFFFF;
   font-family: inherit;
   outline: none;
-  box-sizing: border-box;
   transition: border-color 0.2s;
+  margin-bottom: 0;
 }
 
-.admin-login-input-wrapper input::placeholder {
-  color: #aaa0ae;
+.admin-login-layout .admin-login-input-wrapper input::placeholder {
+  color: #9CA3AF;
+  font-weight: 400;
   opacity: 1;
 }
 
-.admin-login-input-wrapper .admin-login-password-input {
-  padding-right: 54px !important;
+.admin-login-layout .admin-login-password-input {
+  padding-right: 48px !important;
 }
 
-.admin-login-input-wrapper input:focus {
+.admin-login-layout .admin-login-input-wrapper input:focus {
   border-color: var(--primary-pink);
 }
 
-.admin-login-left-icon {
+.admin-login-layout .admin-login-left-icon {
   position: absolute;
   left: 20px;
   top: 50%;
@@ -247,7 +254,7 @@
   z-index: 2;
 }
 
-.admin-login-eye-button {
+.admin-login-layout .admin-login-eye-button {
   position: absolute;
   right: 18px;
   top: 50%;
@@ -263,30 +270,33 @@
   color: #A09BA5;
 }
 
-.admin-login-eye-button svg {
+.admin-login-layout .admin-login-eye-button svg {
   width: 18px;
   height: 18px;
 }
 
-.checkbox-group {
+.admin-login-layout .checkbox-group {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: -8px; /* Tucks row closer toward the password field */
+  margin-top: 0; /* Let flex gap of 24px handle the spacing */
+  margin-bottom: 0;
 }
 
-.checkbox-group input {
+.admin-login-layout .checkbox-group input {
   width: 16px;
   height: 16px;
   accent-color: var(--primary-pink);
   cursor: pointer;
+  margin: 0;
 }
 
-.checkbox-group label {
-  font-size: 12px;
+.admin-login-layout .checkbox-group label {
+  font-size: 13px;
   color: #4A4453;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  margin: 0;
 }
 
 .login-submit-btn {

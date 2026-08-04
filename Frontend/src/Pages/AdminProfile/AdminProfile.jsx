@@ -34,7 +34,7 @@ export default function AdminProfile() {
           currentData.fullName = storedAdmin.name || currentData.fullName;
           currentData.email = storedAdmin.email || currentData.email;
           currentData.profileImage = storedAdmin.profileImage || '';
-        } catch (e) {}
+        } catch {}
       }
 
       try {
@@ -50,7 +50,7 @@ export default function AdminProfile() {
               currentData.profileImage = data.admin.profileImage || currentData.profileImage;
            }
         }
-      } catch (err) {}
+      } catch {}
       
       setProfile(currentData);
       setFormData(currentData);
@@ -122,7 +122,7 @@ export default function AdminProfile() {
              let parsed = JSON.parse(adminStr);
              parsed.profileImage = data.profileImage;
              localStorage.setItem('vehiclecare_admin', JSON.stringify(parsed));
-          } catch(e) {}
+          } catch {}
         }
         setProfile(updated);
         setFormData(updated);
@@ -132,7 +132,7 @@ export default function AdminProfile() {
         setUploadError(data.message || "Failed to upload image");
         setTimeout(() => setUploadError(''), 3000);
       }
-    } catch (err) {
+    } catch {
       setUploadError("Network error. Please try again.");
       setTimeout(() => setUploadError(''), 3000);
     } finally {

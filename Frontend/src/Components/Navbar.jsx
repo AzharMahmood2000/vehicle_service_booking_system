@@ -6,6 +6,11 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Check if admin is already authenticated
+  const adminToken =
+    localStorage.getItem('vehiclecare_admin_token') ||
+    sessionStorage.getItem('vehiclecare_admin_token');
+
   return (
     <nav className="navbar">
       <div className="navbar-container">
@@ -32,6 +37,16 @@ const Navbar = () => {
                 </NavLink>
               </li>
             ))}
+            <li className="nav-item nav-item-admin">
+              <NavLink
+                to={adminToken ? '/admin/dashboard' : '/admin-login'}
+                onClick={() => setMenuOpen(false)}
+                className={({isActive}) => `nav-admin-btn ${isActive ? 'active' : ''}`}
+                id="navbar-admin-login"
+              >
+                {adminToken ? 'Admin Panel' : 'Admin Login'}
+              </NavLink>
+            </li>
           </ul>
         </div>
 

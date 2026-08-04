@@ -281,7 +281,7 @@
 
 .status-cell {
   display: grid;
-  grid-template-columns: 190px 32px;
+  grid-template-columns: 190px 32px 32px;
   align-items: center;
   justify-content: center;
   column-gap: 8px;
@@ -324,6 +324,39 @@
 .bookings-table tr.menu-open .status-menu-btn {
   background: rgba(255, 20, 147, 0.08);
   color: #FF1493;
+}
+
+.delete-booking-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #A09BA5;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.delete-booking-btn:hover,
+.delete-booking-btn:focus-visible {
+  background: rgba(220, 38, 38, 0.1);
+  color: #DC2626;
+  outline: none;
+}
+
+.delete-booking-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.delete-booking-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Portal fixed dropdown - rendered outside table to avoid clipping */

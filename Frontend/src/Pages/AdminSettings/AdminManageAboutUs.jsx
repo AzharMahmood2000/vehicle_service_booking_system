@@ -224,7 +224,7 @@ export default function AdminManageAboutUs() {
           <button className="add-item-btn" onClick={addStat} disabled={isSubmitting}>+ Add Statistic</button>
         </div>
         <div className="repeatable-items-list">
-          {formData.stats.map((stat, i) => (
+          {formData.stats.map((stat) => (
             <div key={stat.id} className="repeatable-item-row">
               <div className="settings-form-group" style={{ flex: '0.3' }}>
                 <label>VALUE</label>

@@ -1,4 +1,0 @@
-◇ injected env (6) from Backend\.env // tip: ⌁ auth for agents [www.vestauth.com]
-Authenticating admin...
-
-❌ Test error: Admin login failed: 401

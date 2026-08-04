@@ -30,7 +30,6 @@ export default function AdminHeader({ searchPlaceholder = "Search vehicle or boo
   // Notification state
   const [notifications, setNotifications] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [notifLoading, setNotifLoading] = useState(false);
   const [notifError, setNotifError] = useState(false);
   const [authFailed, setAuthFailed] = useState(false);
 
@@ -57,7 +56,9 @@ export default function AdminHeader({ searchPlaceholder = "Search vehicle or boo
         const storedAdmin = JSON.parse(adminStr);
         currentData.fullName = storedAdmin.name || currentData.fullName;
         currentData.profileImage = storedAdmin.profileImage || '';
-      } catch (e) {}
+      } catch {
+       // Silent ignore
+      }
     }
     return currentData;
   };
@@ -175,7 +176,7 @@ export default function AdminHeader({ searchPlaceholder = "Search vehicle or boo
       setTotalCount(unreadCount);
       setNotifications(items.slice(0, MAX_DROPDOWN_ITEMS));
       setNotifError(false);
-    } catch (err) {
+    } catch {
       // Keep previous state on network error
       setNotifError(true);
     } finally {
@@ -246,6 +247,13 @@ export default function AdminHeader({ searchPlaceholder = "Search vehicle or boo
   };
 
   const handleLogout = () => {
+    // Completely wipe session tokens from both storages
+    localStorage.removeItem('vehiclecare_admin_token');
+    localStorage.removeItem('vehiclecare_admin');
+    
+    sessionStorage.removeItem('vehiclecare_admin_token');
+    sessionStorage.removeItem('vehiclecare_admin');
+
     setIsProfileOpen(false);
     navigate('/admin-login');
   };

@@ -3,7 +3,6 @@ import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
 // Important: do NOT use bookingStorage for local data
 import API_BASE_URL from '../../api';
-import { BOOKING_STATUS } from '../../constants/bookingStatus';
 import './AdminDashboard.css';
 
 export default function AdminDashboard() {

@@ -6,6 +6,7 @@ const {
   updateBookingStatus,
   trackBooking,
   markBookingNotificationRead,
+  deleteBooking,
 } = require("../controller/bookingcontroller");
 
 const {
@@ -24,5 +25,6 @@ router.get("/", protect, getBookings);
 
 router.put("/:id/status", protect, updateBookingStatus);
 router.put("/:id/notification-read", protect, markBookingNotificationRead);
+router.delete("/:id", protect, deleteBooking);
 
 module.exports = router;  

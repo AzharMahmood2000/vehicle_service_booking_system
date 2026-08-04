@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
 import API_BASE_URL from '../../api';
 import { BOOKING_STATUS_CONFIG } from '../../constants/bookingStatus';
-import { SERVICE_BAY_STATUS } from '../../constants/serviceBayStatus';
 import BayManagerModal from '../../Components/BayManagerModal/BayManagerModal';
 import './AdminCalendar.css';
 
@@ -201,29 +200,6 @@ export default function AdminCalendar() {
   };
 
   // Navigations
-  const handlePrev = () => {
-    if (activeView === 'month') {
-      setCurrentDateParam(new Date(currentDateParam.getFullYear(), currentDateParam.getMonth() - 1, 1));
-    } else if (activeView === 'week') {
-      setCurrentDateParam(new Date(currentDateParam.getFullYear(), currentDateParam.getMonth(), currentDateParam.getDate() - 7));
-    } else if (activeView === 'day') {
-      const newD = new Date(currentDateParam.getFullYear(), currentDateParam.getMonth(), currentDateParam.getDate() - 1);
-      setCurrentDateParam(newD);
-      setSelectedDate(formatLocalDate(newD));
-    }
-  };
-
-  const handleNext = () => {
-    if (activeView === 'month') {
-      setCurrentDateParam(new Date(currentDateParam.getFullYear(), currentDateParam.getMonth() + 1, 1));
-    } else if (activeView === 'week') {
-      setCurrentDateParam(new Date(currentDateParam.getFullYear(), currentDateParam.getMonth(), currentDateParam.getDate() + 7));
-    } else if (activeView === 'day') {
-      const newD = new Date(currentDateParam.getFullYear(), currentDateParam.getMonth(), currentDateParam.getDate() + 1);
-      setCurrentDateParam(newD);
-      setSelectedDate(formatLocalDate(newD));
-    }
-  };
 
   const handleToday = () => {
     const today = new Date();

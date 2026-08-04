@@ -189,6 +189,22 @@ const createBooking = async (req, res) => {
       });
     }
 
+    const normalizedVehicleNumber = vehicleNumber.trim().toUpperCase();
+
+    const existingBooking = await Booking.findOne({
+      vehicleNumber: normalizedVehicleNumber,
+      appointmentDate,
+      startTime,
+      status: { $in: ["REQUEST PENDING", "APPROVED", "IN PROGRESS"] }
+    });
+
+    if (existingBooking) {
+      return res.status(409).json({
+        success: false,
+        message: "A booking already exists for this vehicle at the selected date and time."
+      });
+    }
+
     let booking;
     const session = await mongoose.startSession();
 
@@ -233,7 +249,7 @@ const createBooking = async (req, res) => {
               referenceNumber,
               customerName,
               phoneNumber,
-              vehicleNumber,
+              vehicleNumber: normalizedVehicleNumber,
               vehicleModel,
               serviceId: service._id,
               serviceName: service.title,
@@ -429,10 +445,51 @@ const markBookingNotificationRead = async (req, res) => {
   }
 };
 
+const deleteBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found."
+      });
+    }
+
+    if (booking.status !== "REJECTED") {
+      return res.status(400).json({
+        success: false,
+        message: "Only rejected bookings can be deleted."
+      });
+    }
+
+    await Booking.findByIdAndDelete(req.params.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Rejected booking deleted successfully."
+    });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found."
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete booking",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getBookings,
   createBooking,
   updateBookingStatus,
   trackBooking,
   markBookingNotificationRead,
+  deleteBooking,
 };
