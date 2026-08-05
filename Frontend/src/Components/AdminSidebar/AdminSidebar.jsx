@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import CreateBookingModal from '../CreateBookingModal';
 import './AdminSidebar.css';
 
 export default function AdminSidebar() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   
   const [newRequestCount, setNewRequestCount] = useState(0);
@@ -36,8 +38,44 @@ export default function AdminSidebar() {
   
   const handleCloseModal = () => setIsBookingModalOpen(false);
 
+  React.useEffect(() => {
+    const handleToggle = () => setIsSidebarOpen(prev => !prev);
+    window.addEventListener('toggle_admin_sidebar', handleToggle);
+    return () => window.removeEventListener('toggle_admin_sidebar', handleToggle);
+  }, []);
+
+  React.useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('admin_sidebar_state_changed', {
+        detail: { isOpen: isSidebarOpen }
+      })
+    );
+  }, [isSidebarOpen]);
+
+  React.useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
+
+  React.useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isSidebarOpen) setIsSidebarOpen(false);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isSidebarOpen]);
+
   return (
-    <aside className="admin-sidebar">
+    <>
+      {isSidebarOpen && (
+        <div 
+          className="admin-sidebar-overlay" 
+          onClick={() => setIsSidebarOpen(false)}
+          role="button" 
+          aria-label="Close sidebar"
+          tabIndex={-1}
+        />
+      )}
+      <aside id="admin-sidebar" className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
       <div className="sidebar-brand">
         <div className="brand-logo">
           V
@@ -88,5 +126,6 @@ export default function AdminSidebar() {
         onClose={handleCloseModal} 
       />
     </aside>
+    </>
   );
 }

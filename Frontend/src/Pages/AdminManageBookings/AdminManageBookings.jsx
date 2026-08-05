@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
-// Important: do NOT remove the bookingStorage file, but we remove the imports for it.
+
 import API_BASE_URL from '../../api';
 import { BOOKING_STATUS, BOOKING_STATUS_CONFIG } from '../../constants/bookingStatus';
 import './AdminManageBookings.css';
@@ -34,6 +34,8 @@ export default function AdminManageBookings() {
   const [openStatusMenu, setOpenStatusMenu] = useState(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, placement: 'left', arrowTop: 0 });
   const menuBtnRefs = useRef({});
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+  const statusUpdateInFlightRef = useRef(false);
 
   useEffect(() => {
     fetchBookings();
@@ -184,6 +186,10 @@ export default function AdminManageBookings() {
       if (!confirmReject) return;
     }
 
+    if (statusUpdateInFlightRef.current) return;
+    statusUpdateInFlightRef.current = true;
+    setIsStatusUpdating(true);
+
     try {
       const token = localStorage.getItem('vehiclecare_admin_token') || sessionStorage.getItem('vehiclecare_admin_token');
       if (!token) {
@@ -209,7 +215,10 @@ export default function AdminManageBookings() {
       setOpenStatusMenu(null);
     } catch (err) {
       console.error("Status update error:", err);
-      // fallback logging without alerting immediately on API error, requirement says: show/log the backend message, do not pretend it succeeded
+      alert(err.message || "Failed to update booking status. Please try again.");
+    } finally {
+      statusUpdateInFlightRef.current = false;
+      setIsStatusUpdating(false);
     }
   };
 
@@ -412,6 +421,7 @@ export default function AdminManageBookings() {
                             className="status-menu-btn"
                             ref={(el) => (menuBtnRefs.current[booking._id] = el)}
                             onClick={(e) => openDropdown(booking._id, e)}
+                            disabled={isStatusUpdating}
                           >
                             <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
                           </button>
@@ -488,10 +498,11 @@ export default function AdminManageBookings() {
                   />
                   <div className="status-dropdown-fixed">
                     {STATUS_LIST.map((statusKey) => (
-                      <div
+                      <button
                         key={statusKey}
                         className={`status-dropdown-item ${booking.status === statusKey ? 'active' : ''}`}
                         onClick={() => handleStatusChange(booking._id, statusKey)}
+                        disabled={isStatusUpdating}
                       >
                         <span style={{ flex: 1 }}>{BOOKING_STATUS_CONFIG[statusKey]?.label || statusKey}</span>
                         {booking.status === statusKey && (
@@ -499,7 +510,7 @@ export default function AdminManageBookings() {
                             <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path>
                           </svg>
                         )}
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>

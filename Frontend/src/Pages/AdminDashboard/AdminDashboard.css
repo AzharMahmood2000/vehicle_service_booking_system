@@ -338,6 +338,8 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Stats Row */
@@ -409,6 +411,8 @@
   background: #FFFFFF;
   border-radius: 16px;
   padding: 24px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .job-board-header {
@@ -416,6 +420,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .job-board-title {
@@ -462,6 +468,13 @@
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.table-responsive-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .job-table {
@@ -594,6 +607,11 @@
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 20px;
+}
+
+.dashboard-bottom-grid > div {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .live-workshop-card {
@@ -805,3 +823,27 @@
 
 .bar.grey { background: #E5E0EA; }
 .bar.pink { background: var(--primary-pink); }
+
+@media (max-width: 900px) {
+  .stats-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dashboard-bottom-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .stats-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dashboard-scroll-area {
+    padding: 16px;
+  }
+  .job-board-panel {
+    padding: 16px;
+  }
+  .stat-card {
+    padding: 16px;
+  }
+}

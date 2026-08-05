@@ -15,6 +15,8 @@
   flex-direction: column;
   overflow: visible;
   position: relative;
+  min-width: 0;
+  min-height: 0;
 }
 
 .requests-scroll-area {
@@ -24,6 +26,8 @@
   display: flex;
   flex-direction: column;
   gap: 30px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .requests-header-section {
@@ -96,6 +100,8 @@
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .requests-tabs {
@@ -205,8 +211,11 @@
 /* Table */
 .requests-table-container {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .req-table {
@@ -752,3 +761,39 @@
 }
 
 .pb-40 { padding-bottom: 40px; }
+
+/* Responsive Overrides */
+@media (max-width: 768px) {
+  .requests-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .summary-stat-card {
+    min-width: 0;
+  }
+  .requests-tabs {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+  }
+  .req-tab {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .requests-scroll-area {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .requests-summary-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

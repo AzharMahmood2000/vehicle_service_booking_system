@@ -26,6 +26,7 @@ export default function AdminHeader({ searchPlaceholder = "Search vehicle or boo
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [profile, setProfile] = useState({});
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Notification state
   const [notifications, setNotifications] = useState([]);
@@ -97,6 +98,16 @@ export default function AdminHeader({ searchPlaceholder = "Search vehicle or boo
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
     };
+  }, []);
+
+  useEffect(() => {
+    const handleSidebarState = (e) => {
+      if (e.detail && typeof e.detail.isOpen === 'boolean') {
+        setIsSidebarOpen(e.detail.isOpen);
+      }
+    };
+    window.addEventListener('admin_sidebar_state_changed', handleSidebarState);
+    return () => window.removeEventListener('admin_sidebar_state_changed', handleSidebarState);
   }, []);
 
   // Fetch real notification data from existing APIs
@@ -266,9 +277,21 @@ export default function AdminHeader({ searchPlaceholder = "Search vehicle or boo
 
   return (
     <header className="admin-header">
-      <div className="admin-header-search-bar">
-        <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-        <input type="text" placeholder={searchPlaceholder} />
+      <div className="admin-header-left">
+        <button
+          type="button"
+          className="admin-header-hamburger"
+          aria-label="Open admin navigation"
+          aria-controls="admin-sidebar"
+          aria-expanded={isSidebarOpen}
+          onClick={() => window.dispatchEvent(new Event("toggle_admin_sidebar"))}
+        >
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+        </button>
+        <div className="admin-header-search-bar">
+          <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <input type="text" placeholder={searchPlaceholder} />
+        </div>
       </div>
       
       <div className="admin-header-actions">

@@ -192,57 +192,59 @@ export default function AdminDashboard() {
               </div>
             </div>
             
-            <table className="job-table">
-              <thead>
-                <tr>
-                  <th>NUMBER PLATE</th>
-                  <th>VEHICLE MODEL</th>
-                  <th>CUSTOMER</th>
-                  <th>SERVICE & BAY</th>
-                  <th>TIME SLOT</th>
-                  <th>STATUS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {todayBookings.length === 0 ? (
+            <div className="table-responsive-wrapper">
+              <table className="job-table">
+                <thead>
                   <tr>
-                    <td colSpan="6" style={{textAlign: 'center', padding: '30px', color: '#A09BA5'}}>
-                       No bookings scheduled for today.
-                    </td>
+                    <th>NUMBER PLATE</th>
+                    <th>VEHICLE MODEL</th>
+                    <th>CUSTOMER</th>
+                    <th>SERVICE & BAY</th>
+                    <th>TIME SLOT</th>
+                    <th>STATUS</th>
                   </tr>
-                ) : (
-                  todayBookings.map(booking => {
-                    const plate = booking.vehicleNumber || booking.numberPlate || 'N/A';
-                    const model = booking.vehicleModel || 'Unknown';
-                    const serviceTitle = booking.serviceId?.title || booking.serviceName || 'Service';
-                    const bayName = booking.serviceBay?.name || (typeof booking.serviceBay === 'string' && booking.serviceBay.includes('-') ? `Bay ${booking.serviceBay.split('-')[1]}` : booking.serviceBay || '');
+                </thead>
+                <tbody>
+                  {todayBookings.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" style={{textAlign: 'center', padding: '30px', color: '#A09BA5'}}>
+                         No bookings scheduled for today.
+                      </td>
+                    </tr>
+                  ) : (
+                    todayBookings.map(booking => {
+                      const plate = booking.vehicleNumber || booking.numberPlate || 'N/A';
+                      const model = booking.vehicleModel || 'Unknown';
+                      const serviceTitle = booking.serviceId?.title || booking.serviceName || 'Service';
+                      const bayName = booking.serviceBay?.name || (typeof booking.serviceBay === 'string' && booking.serviceBay.includes('-') ? `Bay ${booking.serviceBay.split('-')[1]}` : booking.serviceBay || '');
 
-                    return (
-                      <tr key={booking._id}>
-                        <td>
-                          <div className="number-plate-badge">{plate}</div>
-                        </td>
-                        <td>
-                          <div className="vehicle-name">{model}</div>
-                        </td>
-                        <td>
-                          <div className="customer-name">{booking.customerName}</div>
-                          <div className="customer-phone">{booking.phoneNumber}</div>
-                        </td>
-                        <td>
-                          <div className="service-name">{serviceTitle}</div>
-                          {bayName && <div style={{fontSize: '11px', color:'#FF1493', marginTop: '4px', fontWeight: 600}}>{bayName}</div>}
-                        </td>
-                        <td>
-                          <div className="time-slot"><svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> {booking.startTime} {booking.endTime ? `- ${booking.endTime}` : ''}</div>
-                        </td>
-                        <td><span className={`badge ${getStatusBadgeClass(booking.status)}`}>{booking.status}</span></td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
+                      return (
+                        <tr key={booking._id}>
+                          <td>
+                            <div className="number-plate-badge">{plate}</div>
+                          </td>
+                          <td>
+                            <div className="vehicle-name">{model}</div>
+                          </td>
+                          <td>
+                            <div className="customer-name">{booking.customerName}</div>
+                            <div className="customer-phone">{booking.phoneNumber}</div>
+                          </td>
+                          <td>
+                            <div className="service-name">{serviceTitle}</div>
+                            {bayName && <div style={{fontSize: '11px', color:'#FF1493', marginTop: '4px', fontWeight: 600}}>{bayName}</div>}
+                          </td>
+                          <td>
+                            <div className="time-slot"><svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> {booking.startTime} {booking.endTime ? `- ${booking.endTime}` : ''}</div>
+                          </td>
+                          <td><span className={`badge ${getStatusBadgeClass(booking.status)}`}>{booking.status}</span></td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="dashboard-bottom-grid">
