@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   FaUser,
@@ -20,9 +20,18 @@ export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
+  const isSubmittingRef = useRef(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+
+    // Clear any stale authentication data prior to an attempt
+    localStorage.removeItem('vehiclecare_admin_token');
+    localStorage.removeItem('vehiclecare_admin');
+    sessionStorage.removeItem('vehiclecare_admin_token');
+    sessionStorage.removeItem('vehiclecare_admin');
 
     setLoginError('');
     setIsLoading(true);
@@ -73,6 +82,7 @@ export default function AdminLogin() {
           'Unable to login. Please try again.'
       );
     } finally {
+      isSubmittingRef.current = false;
       setIsLoading(false);
     }
   };

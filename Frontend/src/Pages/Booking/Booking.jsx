@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../../Components/Navbar';
 import Footer from '../../Components/Footer';
@@ -57,6 +57,7 @@ export default function Booking() {
   const [errorMsg, setErrorMsg] = useState('');
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const part2Ref = React.useRef(null);
   const part1Ref = React.useRef(null);
@@ -118,6 +119,8 @@ export default function Booking() {
       return;
     }
 
+    const abortController = new AbortController();
+
     const fetchAvailability = async () => {
       try {
         setSlotsLoading(true);
@@ -125,9 +128,12 @@ export default function Booking() {
         setAvailableSlots([]);
 
         const response = await fetch(
-          `${API_BASE_URL}/availability/slots?date=${formData.preferredDate}&serviceId=${formData.serviceType}`
+          `${API_BASE_URL}/availability/slots?date=${formData.preferredDate}&serviceId=${formData.serviceType}`,
+          { signal: abortController.signal }
         );
         const data = await response.json();
+
+        if (abortController.signal.aborted) return;
 
         if (!response.ok || !data.success) {
           throw new Error(data.message || 'Failed to check availability');
@@ -146,15 +152,20 @@ export default function Booking() {
           setSlotsMessage('No available service times for this date. Please choose another date.');
         }
       } catch (error) {
+        if (error.name === 'AbortError' || abortController.signal.aborted) return;
         console.error('Availability check failed:', error);
         setSlotsMessage(error.message || 'Failed to check availability.');
         setAvailableSlots([]);
       } finally {
-        setSlotsLoading(false);
+        if (!abortController.signal.aborted) {
+          setSlotsLoading(false);
+        }
       }
     };
 
     fetchAvailability();
+
+    return () => abortController.abort();
   }, [formData.serviceType, formData.preferredDate]);
 
   /* ═══════════════════════════════════════════════
@@ -197,20 +208,22 @@ export default function Booking() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.serviceType || !formData.preferredDate || !formData.preferredTime) {
-      setErrorMsg('Please select a service, date, and a valid start time.');
-      return;
-    }
-
-    if (!formData.vehicleModel.trim()) {
-      setErrorMsg('Please enter your vehicle model.');
-      return;
-    }
-
-    setErrorMsg('');
-    setIsSubmitting(true);
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
     try {
+      if (!formData.serviceType || !formData.preferredDate || !formData.preferredTime) {
+        setErrorMsg('Please select a service, date, and a valid start time.');
+        return;
+      }
+
+      if (!formData.vehicleModel.trim()) {
+        setErrorMsg('Please enter your vehicle model.');
+        return;
+      }
+
+      setErrorMsg('');
+      setIsSubmitting(true);
       const response = await fetch(`${API_BASE_URL}/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -256,6 +269,7 @@ export default function Booking() {
       console.error('Booking submission failed:', error);
       setErrorMsg(error.message || 'Something went wrong. Please try again.');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

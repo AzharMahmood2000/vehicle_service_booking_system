@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ServiceDetailsModal from '../../Components/ServiceDetailsModal';
 import Navbar from '../../Components/Navbar';
@@ -112,6 +112,7 @@ const Home = () => {
 
   const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', message: '' });
   const [contactStatus, setContactStatus] = useState({ loading: false, msg: '', type: '' });
+  const isSubmittingContactRef = useRef(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -165,13 +166,31 @@ const Home = () => {
 
   const handleContactSubmit = async (e) => {
     e.preventDefault();
+
+    if (isSubmittingContactRef.current) return;
+    isSubmittingContactRef.current = true;
+
     setContactStatus({ loading: true, msg: '', type: '' });
     
     try {
+      if (
+        !contactForm.name.trim() || 
+        !contactForm.email.trim() || 
+        !contactForm.phone.trim() || 
+        !contactForm.message.trim()
+      ) {
+        throw new Error('Please fill out all required fields with valid information.');
+      }
+
       const response = await fetch(`${API_BASE_URL}/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(contactForm)
+        body: JSON.stringify({
+          name: contactForm.name.trim(),
+          email: contactForm.email.trim(),
+          phone: contactForm.phone.trim(),
+          message: contactForm.message.trim()
+        })
       });
       const data = await response.json();
 
@@ -184,6 +203,8 @@ const Home = () => {
       setTimeout(() => setContactStatus({ loading: false, msg: '', type: '' }), 4000);
     } catch (err) {
       setContactStatus({ loading: false, msg: err.message, type: 'error' });
+    } finally {
+      isSubmittingContactRef.current = false;
     }
   };
 

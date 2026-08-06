@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Navbar from '../../Components/Navbar';
 import Footer from '../../Components/Footer';
 import API_BASE_URL from '../../api';
@@ -11,27 +11,32 @@ export default function TrackBooking() {
   const [trackingResult, setTrackingResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const isTrackingRef = useRef(false);
 
   const handleTrack = async (e) => {
     e.preventDefault();
-    setError('');
-    setTrackingResult(null);
-
-    const checkRef = refNum.trim();
-    const checkPhone = phone.trim();
-
-    if (!checkRef) {
-      setError('Booking Reference Number is required.');
-      return;
-    }
-    if (!checkPhone) {
-      setError('Phone Number is required.');
-      return;
-    }
-
-    setIsLoading(true);
+    
+    if (isTrackingRef.current) return;
+    isTrackingRef.current = true;
 
     try {
+      setError('');
+      setTrackingResult(null);
+
+      const checkRef = refNum.trim();
+      const checkPhone = phone.trim();
+
+      if (!checkRef) {
+        setError('Booking Reference Number is required.');
+        return;
+      }
+      if (!checkPhone) {
+        setError('Phone Number is required.');
+        return;
+      }
+
+      setIsLoading(true);
+
       const res = await fetch(`${API_BASE_URL}/bookings/track/${encodeURIComponent(checkRef)}?phone=${encodeURIComponent(checkPhone)}`);
       const data = await res.json();
       
@@ -122,9 +127,10 @@ export default function TrackBooking() {
       } else {
          setError('Booking not found. Please check your reference number and phone number.');
       }
-    } catch {
+    } catch (err) {
       setError('Network error tracking booking. Please try again later.');
     } finally {
+      isTrackingRef.current = false;
       setIsLoading(false);
     }
   };
@@ -154,6 +160,7 @@ export default function TrackBooking() {
                   value={refNum}
                   onChange={(e) => setRefNum(e.target.value)}
                   className="form-input"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -169,6 +176,7 @@ export default function TrackBooking() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="form-input"
+                  disabled={isLoading}
                 />
               </div>
             </div>

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
 import API_BASE_URL from '../../api';
@@ -7,6 +8,17 @@ import BayManagerModal from '../../Components/BayManagerModal/BayManagerModal';
 import './AdminCalendar.css';
 
 export default function AdminCalendar() {
+  const navigate = useNavigate();
+
+  const handleAuthFailure = useCallback(() => {
+    localStorage.removeItem('vehiclecare_admin_token');
+    localStorage.removeItem('vehiclecare_admin');
+    sessionStorage.removeItem('vehiclecare_admin_token');
+    sessionStorage.removeItem('vehiclecare_admin');
+    alert("Session expired. Please log in again.");
+    navigate('/admin-login');
+  }, [navigate]);
+
   const [selectedDate, setSelectedDate] = useState(null);
   const [isSchedulePanelOpen, setIsSchedulePanelOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -50,21 +62,24 @@ export default function AdminCalendar() {
 
   // We only fetch data once per month interval. So if navigating within same month, we don't refetch
   useEffect(() => {
-    fetchCalendarData(year, monthIndex);
+    const abortController = new AbortController();
+    fetchCalendarData(year, monthIndex, abortController.signal);
+    return () => {
+      abortController.abort();
+    };
   }, [year, monthIndex]);
 
-  const fetchCalendarData = async (y, m) => {
+  const fetchCalendarData = async (y, m, signal) => {
     setIsLoading(true);
     setApiError(null);
     try {
       const token = sessionStorage.getItem('vehiclecare_admin_token') || localStorage.getItem('vehiclecare_admin_token');
       if (!token) {
-        setApiError("Authentication required.");
-        setIsLoading(false);
+        handleAuthFailure();
         return;
       }
 
-      const config = { headers: { 'Authorization': `Bearer ${token}` } };
+      const config = { headers: { 'Authorization': `Bearer ${token}` }, signal };
       
       const firstDay = new Date(y, m, 1);
       const startDayOfWeek = firstDay.getDay(); 
@@ -78,8 +93,20 @@ export default function AdminCalendar() {
       const [bookingsRes, baysRes, maintRes] = await Promise.all([
         fetch(`${API_BASE_URL}/calendar/bookings?startDate=${startStr}&endDate=${endStr}`, config),
         fetch(`${API_BASE_URL}/bays`, config),
-        fetch(`${API_BASE_URL}/maintenance`, config).catch(() => null)
+        fetch(`${API_BASE_URL}/maintenance`, config).catch(err => {
+          if (err.name === 'AbortError') throw err;
+          return null;
+        })
       ]);
+
+      if (
+        (bookingsRes && bookingsRes.status === 401) ||
+        (baysRes && baysRes.status === 401) ||
+        (maintRes && maintRes.status === 401)
+      ) {
+        handleAuthFailure();
+        return;
+      }
 
       if (!bookingsRes.ok) throw new Error("Failed to load calendar data.");
       if (!baysRes.ok) throw new Error("Failed to load service bays.");
@@ -91,14 +118,19 @@ export default function AdminCalendar() {
         mData = await maintRes.json();
       }
 
+      if (signal?.aborted) return;
+
       setCalendarBookings(bData.bookings || []);
       setBays(baysData.bays || []);
       setMaintenances(mData.maintenances || []);
     } catch (err) {
+      if (err.name === 'AbortError' || signal?.aborted) return;
       console.error(err);
       setApiError("Unable to load calendar data.");
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      }
     }
   };
 

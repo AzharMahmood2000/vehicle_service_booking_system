@@ -1,7 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../../api';
 
 export default function AdminSecuritySettings() {
+  const navigate = useNavigate();
+
+  const handleAuthFailure = useCallback(() => {
+    localStorage.removeItem('vehiclecare_admin_token');
+    localStorage.removeItem('vehiclecare_admin');
+    sessionStorage.removeItem('vehiclecare_admin_token');
+    sessionStorage.removeItem('vehiclecare_admin');
+    alert("Session expired. Please log in again.");
+    navigate('/admin-login');
+  }, [navigate]);
+
+  const isSubmittingRef = useRef(false);
+
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -30,35 +44,39 @@ export default function AdminSecuritySettings() {
 
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
-
-    if (!formData.currentPassword) {
-      setErrorMsg('Please enter your current password.');
-      return;
-    }
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     
-    if (formData.newPassword.length < 8) {
-      setErrorMsg('New password must be at least 8 characters.');
-      return;
-    }
-
-    if (formData.newPassword === formData.currentPassword) {
-      setErrorMsg('New password cannot be the same as your current password.');
-      return;
-    }
-
-    if (formData.newPassword !== formData.confirmPassword) {
-      setErrorMsg('Passwords do not match.');
-      return;
-    }
-
-    setIsSubmitting(true);
-
     try {
+      setErrorMsg('');
+      setSuccessMsg('');
+
+      if (!formData.currentPassword) {
+        setErrorMsg('Please enter your current password.');
+        return;
+      }
+      
+      if (formData.newPassword.length < 8) {
+        setErrorMsg('New password must be at least 8 characters.');
+        return;
+      }
+
+      if (formData.newPassword === formData.currentPassword) {
+        setErrorMsg('New password cannot be the same as your current password.');
+        return;
+      }
+
+      if (formData.newPassword !== formData.confirmPassword) {
+        setErrorMsg('Passwords do not match.');
+        return;
+      }
+
+      setIsSubmitting(true);
+
       const token = getToken();
       if (!token) {
-        throw new Error('Your session has expired. Please log in again.');
+        handleAuthFailure();
+        return;
       }
 
       const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
@@ -76,7 +94,8 @@ export default function AdminSecuritySettings() {
       const data = await response.json();
 
       if (response.status === 401) {
-        throw new Error('Your session has expired. Please log in again.');
+        handleAuthFailure();
+        return;
       }
 
       if (!response.ok || !data.success) {
@@ -97,6 +116,7 @@ export default function AdminSecuritySettings() {
     } catch (err) {
       setErrorMsg(err.message || 'Unable to update password. Please try again.');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

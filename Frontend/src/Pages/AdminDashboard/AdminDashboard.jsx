@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
 // Important: do NOT use bookingStorage for local data
@@ -6,6 +7,19 @@ import API_BASE_URL from '../../api';
 import './AdminDashboard.css';
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+
+  const handleAuthFailure = useCallback(() => {
+    localStorage.removeItem('vehiclecare_admin_token');
+    localStorage.removeItem('vehiclecare_admin');
+    sessionStorage.removeItem('vehiclecare_admin_token');
+    sessionStorage.removeItem('vehiclecare_admin');
+    alert("Session expired. Please log in again.");
+    navigate('/admin-login');
+  }, [navigate]);
+
+  const fetchInFlightRef = useRef(false);
+
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, inProgress: 0, completed: 0 });
   const [todayBookings, setTodayBookings] = useState([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
@@ -18,13 +32,14 @@ export default function AdminDashboard() {
   }, []);
 
   const fetchDashboardData = async () => {
+    if (fetchInFlightRef.current) return;
+    fetchInFlightRef.current = true;
     setIsLoading(true);
     setApiError(null);
     try {
       const token = localStorage.getItem('vehiclecare_admin_token') || sessionStorage.getItem('vehiclecare_admin_token');
       if (!token) {
-        setApiError("Authentication required. Please log in.");
-        setIsLoading(false);
+        handleAuthFailure();
         return;
       }
       
@@ -35,6 +50,15 @@ export default function AdminDashboard() {
         fetch(`${API_BASE_URL}/bookings`, config),
         fetch(`${API_BASE_URL}/bays`, config).catch(() => null)
       ]);
+
+      if (
+        (summaryRes && summaryRes.status === 401) ||
+        (bookingsRes && bookingsRes.status === 401) ||
+        (baysRes && baysRes.status === 401)
+      ) {
+        handleAuthFailure();
+        return;
+      }
       
       if (!summaryRes || !summaryRes.ok) {
         throw new Error("Failed to load dashboard summary.");
@@ -87,6 +111,7 @@ export default function AdminDashboard() {
       setApiError("Unable to load dashboard data.");
     } finally {
       setIsLoading(false);
+      fetchInFlightRef.current = false;
     }
   };
 
@@ -286,7 +311,14 @@ export default function AdminDashboard() {
                 <div className="progress-bg"><div className="progress-fill yellow" style={{width: `${stats.total > 0 ? Math.round((stats.pending / (stats.total || 1)) * 100) : 0}%`}}></div></div>
               </div>
 
-              <button className="btn-outline-glow">REFRESH DASHBOARD</button>
+              <button 
+                className="btn-outline-glow"
+                onClick={fetchDashboardData}
+                disabled={isLoading}
+                style={isLoading ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
+              >
+                REFRESH DASHBOARD
+              </button>
             </div>
 
             <div className="upcoming-appointments-card">

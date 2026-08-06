@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../../api';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -11,6 +12,19 @@ const slotIntervalOptions = [
 ];
 
 export default function AdminBookingRules() {
+  const navigate = useNavigate();
+
+  const handleAuthFailure = useCallback(() => {
+    localStorage.removeItem('vehiclecare_admin_token');
+    localStorage.removeItem('vehiclecare_admin');
+    sessionStorage.removeItem('vehiclecare_admin_token');
+    sessionStorage.removeItem('vehiclecare_admin');
+    alert("Session expired. Please log in again.");
+    navigate('/admin-login');
+  }, [navigate]);
+
+  const savingRef = useRef(false);
+
   const [formData, setFormData] = useState({
     openingTime: '09:00',
     closingTime: '17:00',
@@ -84,29 +98,35 @@ export default function AdminBookingRules() {
 
   const handleSaveRules = async (e) => {
     e.preventDefault();
-    setError('');
-
-    // Frontend validation
-    if (formData.openingTime >= formData.closingTime) {
-      setError('Opening time must be before closing time.');
-      return;
-    }
-
-    const advDays = Number(formData.advanceBookingDays);
-    if (!advDays || advDays < 1 || advDays > 365) {
-      setError('Maximum advance booking days must be between 1 and 365.');
-      return;
-    }
-
-    if (!slotIntervalOptions.some(opt => opt.value === Number(formData.slotIntervalMins))) {
-      setError('Invalid slot interval value.');
-      return;
-    }
-
-    setSaving(true);
+    if (savingRef.current) return;
+    savingRef.current = true;
 
     try {
+      setError('');
+
+      // Frontend validation
+      if (formData.openingTime >= formData.closingTime) {
+        setError('Opening time must be before closing time.');
+        return;
+      }
+
+      const advDays = Number(formData.advanceBookingDays);
+      if (!advDays || advDays < 1 || advDays > 365) {
+        setError('Maximum advance booking days must be between 1 and 365.');
+        return;
+      }
+
+      if (!slotIntervalOptions.some(opt => opt.value === Number(formData.slotIntervalMins))) {
+        setError('Invalid slot interval value.');
+        return;
+      }
+
+      setSaving(true);
       const token = getToken();
+      if (!token) {
+        handleAuthFailure();
+        return;
+      }
       const response = await fetch(`${API_BASE_URL}/settings/booking_rules`, {
         method: 'PUT',
         headers: {
@@ -128,7 +148,7 @@ export default function AdminBookingRules() {
       const data = await response.json();
 
       if (response.status === 401) {
-        setError('Session expired. Please log in again.');
+        handleAuthFailure();
         return;
       }
 
@@ -142,6 +162,7 @@ export default function AdminBookingRules() {
       console.error(err);
       setError(err.message || 'Something went wrong saving booking rules.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

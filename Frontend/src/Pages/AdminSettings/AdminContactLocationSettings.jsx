@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../../api';
 
 const defaultContactData = {
@@ -11,6 +12,19 @@ const defaultContactData = {
 };
 
 export default function AdminContactLocationSettings() {
+  const navigate = useNavigate();
+
+  const handleAuthFailure = useCallback(() => {
+    localStorage.removeItem('vehiclecare_admin_token');
+    localStorage.removeItem('vehiclecare_admin');
+    sessionStorage.removeItem('vehiclecare_admin_token');
+    sessionStorage.removeItem('vehiclecare_admin');
+    alert("Session expired. Please log in again.");
+    navigate('/admin-login');
+  }, [navigate]);
+
+  const isSubmittingRef = useRef(false);
+
   const [formData, setFormData] = useState(defaultContactData);
   const [showToast, setShowToast] = useState(false);
   const [errors, setErrors] = useState({});
@@ -77,13 +91,20 @@ export default function AdminContactLocationSettings() {
   };
 
   const handleSaveChanges = async () => {
-    if (!validate()) return;
-    
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+
     try {
+      if (!validate()) return;
+      
       setIsSubmitting(true);
       setErrorMsg('');
 
       const token = getToken();
+      if (!token) {
+        handleAuthFailure();
+        return;
+      }
       const response = await fetch(`${API_BASE_URL}/settings/contact_info`, {
         method: 'PUT',
         headers: {
@@ -96,7 +117,8 @@ export default function AdminContactLocationSettings() {
       const data = await response.json();
 
       if (response.status === 401) {
-        throw new Error("Your session has expired. Please log in again.");
+        handleAuthFailure();
+        return;
       }
 
       if (!response.ok || !data.success) {
@@ -109,6 +131,7 @@ export default function AdminContactLocationSettings() {
       console.error(e);
       setErrorMsg(e.message || 'Unable to update contact settings. Please try again.');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

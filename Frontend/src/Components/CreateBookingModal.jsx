@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import API_BASE_URL from '../api';
 
 function formatTime12h(time24) {
@@ -17,6 +17,7 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
   const [availableSlots, setAvailableSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [errorMsg, setErrorMsg] = useState('');
   
   const [formData, setFormData] = useState({
@@ -68,6 +69,8 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
 
   // Load available slots dynamically when service or date change
   useEffect(() => {
+    const abortController = new AbortController();
+
     if (isOpen && formData.serviceId && formData.preferredDate) {
       const fetchAvailability = async () => {
         setSlotsLoading(true);
@@ -77,9 +80,12 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
 
         try {
           const response = await fetch(
-            `${API_BASE_URL}/availability/slots?date=${formData.preferredDate}&serviceId=${formData.serviceId}`
+            `${API_BASE_URL}/availability/slots?date=${formData.preferredDate}&serviceId=${formData.serviceId}`,
+            { signal: abortController.signal }
           );
           const data = await response.json();
+
+          if (abortController.signal.aborted) return;
 
           if (!response.ok || !data.success) {
             throw new Error(data.message || 'Failed to fetch slots.');
@@ -95,10 +101,13 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
             }
           }
         } catch (err) {
+          if (err.name === 'AbortError' || abortController.signal.aborted) return;
           console.error(err);
           setErrorMsg(err.message || 'Failed to load availability slots.');
         } finally {
-          setSlotsLoading(false);
+          if (!abortController.signal.aborted) {
+            setSlotsLoading(false);
+          }
         }
       };
       
@@ -107,6 +116,8 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
       setAvailableSlots([]);
       setSelectedTimeSlot('');
     }
+
+    return () => abortController.abort();
   }, [isOpen, formData.serviceId, formData.preferredDate]);
 
   // Lock body scroll when modal is open
@@ -129,35 +140,38 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
   const handleCreateBooking = async (e) => {
     e.preventDefault();
 
-    if (!formData.customerName.trim()) {
-      setErrorMsg("Please enter the customer name.");
-      return;
-    }
-    if (!formData.phoneNumber.trim()) {
-      setErrorMsg("Please enter the phone number.");
-      return;
-    }
-    if (!formData.vehicleNumber.trim()) {
-      setErrorMsg("Please enter the vehicle number.");
-      return;
-    }
-    if (!formData.vehicleModel.trim()) {
-      setErrorMsg("Please enter the vehicle model.");
-      return;
-    }
-    if (!formData.preferredDate) {
-      setErrorMsg("Please select a booking date.");
-      return;
-    }
-    if (!selectedTimeSlot) {
-      setErrorMsg("Please select an available booking slot.");
-      return;
-    }
-    
-    setErrorMsg('');
-    setIsSubmitting(true);
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
     try {
+      if (!formData.customerName.trim()) {
+        setErrorMsg("Please enter the customer name.");
+        return;
+      }
+      if (!formData.phoneNumber.trim()) {
+        setErrorMsg("Please enter the phone number.");
+        return;
+      }
+      if (!formData.vehicleNumber.trim()) {
+        setErrorMsg("Please enter the vehicle number.");
+        return;
+      }
+      if (!formData.vehicleModel.trim()) {
+        setErrorMsg("Please enter the vehicle model.");
+        return;
+      }
+      if (!formData.preferredDate) {
+        setErrorMsg("Please select a booking date.");
+        return;
+      }
+      if (!selectedTimeSlot) {
+        setErrorMsg("Please select an available booking slot.");
+        return;
+      }
+      
+      setErrorMsg('');
+      setIsSubmitting(true);
+
       const response = await fetch(`${API_BASE_URL}/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -192,6 +206,7 @@ export default function CreateBookingModal({ isOpen, onClose, initialDate, onBoo
       console.error(err);
       setErrorMsg(err.message || 'Something went wrong while creating the booking.');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

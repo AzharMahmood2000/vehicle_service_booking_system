@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../../api';
 
 const defaultAboutData = {
@@ -39,6 +40,19 @@ const defaultAboutData = {
 };
 
 export default function AdminManageAboutUs() {
+  const navigate = useNavigate();
+
+  const handleAuthFailure = useCallback(() => {
+    localStorage.removeItem('vehiclecare_admin_token');
+    localStorage.removeItem('vehiclecare_admin');
+    sessionStorage.removeItem('vehiclecare_admin_token');
+    sessionStorage.removeItem('vehiclecare_admin');
+    alert("Session expired. Please log in again.");
+    navigate('/admin-login');
+  }, [navigate]);
+
+  const isSubmittingRef = useRef(false);
+
   const [formData, setFormData] = useState(defaultAboutData);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -140,15 +154,23 @@ export default function AdminManageAboutUs() {
   };
 
   const handleSaveChanges = async () => {
-    if (!formData.hero.title || !formData.hero.description) {
-      setErrorMsg("Hero Title and Description cannot be empty.");
-      return;
-    }
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
     try {
+      if (!formData.hero.title || !formData.hero.description) {
+        setErrorMsg("Hero Title and Description cannot be empty.");
+        return;
+      }
+
       setIsSubmitting(true);
       setErrorMsg('');
       const token = getToken();
+
+      if (!token) {
+        handleAuthFailure();
+        return;
+      }
 
       const response = await fetch(`${API_BASE_URL}/settings/about_content`, {
         method: 'PUT',
@@ -162,7 +184,8 @@ export default function AdminManageAboutUs() {
       const data = await response.json();
 
       if (response.status === 401) {
-        throw new Error('Your session has expired. Please log in again.');
+        handleAuthFailure();
+        return;
       }
 
       if (!response.ok || !data.success) {
@@ -175,6 +198,7 @@ export default function AdminManageAboutUs() {
       console.error(error);
       setErrorMsg(error.message || 'Unable to update About Us content. Please try again.');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
