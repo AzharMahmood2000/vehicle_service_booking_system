@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
 import API_BASE_URL from '../../api';
@@ -8,6 +9,17 @@ import './AdminServiceCategories.css';
 const mockCategories = [];
 
 export default function AdminServiceCategories() {
+  const navigate = useNavigate();
+
+  const handleAuthFailure = useCallback(() => {
+    localStorage.removeItem('vehiclecare_admin_token');
+    localStorage.removeItem('vehiclecare_admin');
+    sessionStorage.removeItem('vehiclecare_admin_token');
+    sessionStorage.removeItem('vehiclecare_admin');
+    alert("Session expired. Please log in again.");
+    navigate('/admin-login');
+  }, [navigate]);
+
   const [categories, setCategories] = useState(mockCategories);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -15,6 +27,14 @@ export default function AdminServiceCategories() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingServiceId, setDeletingServiceId] = useState(null);
   const [editingServiceId, setEditingServiceId] = useState(null);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [togglingServiceId, setTogglingServiceId] = useState(null);
+
+  const isSavingRef = useRef(false);
+  const isDeletingRef = useRef(false);
+  const togglingServiceIdRef = useRef(null);
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState('');
@@ -38,7 +58,7 @@ export default function AdminServiceCategories() {
           sessionStorage.getItem('vehiclecare_admin_token');
 
         if (!token) {
-          console.error('Admin token not found');
+          handleAuthFailure();
           return;
         }
 
@@ -53,6 +73,11 @@ export default function AdminServiceCategories() {
         );
 
         const data = await response.json();
+
+        if (response.status === 401) {
+          handleAuthFailure();
+          return;
+        }
 
         if (!response.ok || !data.success) {
           throw new Error(
@@ -86,6 +111,7 @@ export default function AdminServiceCategories() {
           'Failed to fetch admin service categories:',
           error
         );
+        alert(error.message || 'Failed to load service categories');
       }
     };
 
@@ -93,13 +119,18 @@ export default function AdminServiceCategories() {
   }, []);
 
   const handleToggle = async (id) => {
+    if (togglingServiceIdRef.current === id) return;
+    togglingServiceIdRef.current = id;
+    setTogglingServiceId(id);
+
     try {
       const token =
         localStorage.getItem('vehiclecare_admin_token') ||
         sessionStorage.getItem('vehiclecare_admin_token');
 
       if (!token) {
-        throw new Error('Admin token not found');
+        handleAuthFailure();
+        return;
       }
 
       const currentService = categories.find(
@@ -126,6 +157,11 @@ export default function AdminServiceCategories() {
         }
       );
 
+      if (response.status === 401) {
+        handleAuthFailure();
+        return;
+      }
+
       const data = await response.json();
 
       if (!response.ok || !data.success) {
@@ -149,6 +185,12 @@ export default function AdminServiceCategories() {
         'Failed to update service status:',
         error
       );
+      alert(error.message || 'Failed to update service status');
+    } finally {
+      if (togglingServiceIdRef.current === id) {
+        togglingServiceIdRef.current = null;
+        setTogglingServiceId(null);
+      }
     }
   };
 
@@ -224,6 +266,9 @@ export default function AdminServiceCategories() {
       },
       body: formData
     });
+    if (res.status === 401) {
+      throw new Error("AUTH_FAILED");
+    }
     const data = await res.json();
     if (!res.ok || !data.success) {
       throw new Error(data.message || 'Image upload failed');
@@ -233,15 +278,19 @@ export default function AdminServiceCategories() {
 
   const handleCreateOrUpdateService = async (e) => {
     e.preventDefault();
+    if (isSavingRef.current) return;
 
     const token =
       localStorage.getItem('vehiclecare_admin_token') ||
       sessionStorage.getItem('vehiclecare_admin_token');
 
     if (!token) {
-      console.error('Admin token not found');
+      handleAuthFailure();
       return;
     }
+
+    isSavingRef.current = true;
+    setIsSaving(true);
 
     try {
       let finalImagePath = formData.image;
@@ -271,6 +320,11 @@ export default function AdminServiceCategories() {
             body: JSON.stringify(bodyData)
           }
         );
+
+        if (response.status === 401) {
+          handleAuthFailure();
+          return;
+        }
 
         const data = await response.json();
 
@@ -333,6 +387,11 @@ export default function AdminServiceCategories() {
           }
         );
 
+        if (response.status === 401) {
+          handleAuthFailure();
+          return;
+        }
+
         const data = await response.json();
 
         if (!response.ok || !data.success) {
@@ -381,10 +440,18 @@ export default function AdminServiceCategories() {
         }, 3000);
       }
     } catch (error) {
+      if (error.message === "AUTH_FAILED") {
+        handleAuthFailure();
+        return;
+      }
       console.error(
         'Failed to process service:',
         error
       );
+      alert(error.message || 'Failed to process service');
+    } finally {
+      isSavingRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -400,18 +467,22 @@ export default function AdminServiceCategories() {
 
   // Delete Service
   const handleConfirmDelete = async () => {
+    if (isDeletingRef.current) return;
+    if (!deletingServiceId) return;
+
+    const token =
+      localStorage.getItem('vehiclecare_admin_token') ||
+      sessionStorage.getItem('vehiclecare_admin_token');
+
+    if (!token) {
+      handleAuthFailure();
+      return;
+    }
+
+    isDeletingRef.current = true;
+    setIsDeleting(true);
+
     try {
-      const token =
-        localStorage.getItem('vehiclecare_admin_token') ||
-        sessionStorage.getItem('vehiclecare_admin_token');
-
-      if (!token) {
-        throw new Error('Admin token not found');
-      }
-
-      if (!deletingServiceId) {
-        return;
-      }
 
       const response = await fetch(
         `${API_BASE_URL}/services/${deletingServiceId}`,
@@ -422,6 +493,11 @@ export default function AdminServiceCategories() {
           }
         }
       );
+
+      if (response.status === 401) {
+        handleAuthFailure();
+        return;
+      }
 
       const data = await response.json();
 
@@ -457,6 +533,10 @@ export default function AdminServiceCategories() {
         'Failed to delete service:',
         error
       );
+      alert(error.message || 'Failed to delete service');
+    } finally {
+      isDeletingRef.current = false;
+      setIsDeleting(false);
     }
   };
 
@@ -548,7 +628,8 @@ export default function AdminServiceCategories() {
                         cat.active
                           ? 'active'
                           : ''
-                      }`}
+                      } ${togglingServiceId === cat.id ? 'disabled' : ''}`}
+                      style={togglingServiceId === cat.id ? { opacity: 0.5, pointerEvents: 'none' } : {}}
                       onClick={() =>
                         handleToggle(cat.id)
                       }
@@ -917,6 +998,8 @@ export default function AdminServiceCategories() {
                 <button
                   type="submit"
                   className="btn-create"
+                  disabled={isSaving}
+                  style={isSaving ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
                 >
                   {editingServiceId
                     ? 'Update Service'
@@ -991,8 +1074,10 @@ export default function AdminServiceCategories() {
                 type="button"
                 className="btn-create"
                 style={{
-                  backgroundColor: '#E11D48'
+                  backgroundColor: '#E11D48',
+                  ...(isDeleting ? { opacity: 0.7, cursor: 'not-allowed' } : {})
                 }}
+                disabled={isDeleting}
                 onClick={
                   handleConfirmDelete
                 }
