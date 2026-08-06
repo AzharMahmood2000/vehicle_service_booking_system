@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
 
@@ -18,6 +18,16 @@ const STATUS_LIST = [
 export default function AdminManageBookings() {
   const [searchParams] = useSearchParams();
   const targetRef = searchParams.get('ref');
+  const navigate = useNavigate();
+
+  const handleAuthFailure = useCallback(() => {
+    localStorage.removeItem('vehiclecare_admin_token');
+    localStorage.removeItem('vehiclecare_admin');
+    sessionStorage.removeItem('vehiclecare_admin_token');
+    sessionStorage.removeItem('vehiclecare_admin');
+    alert("Session expired. Please log in again.");
+    navigate('/admin-login');
+  }, [navigate]);
 
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,6 +46,8 @@ export default function AdminManageBookings() {
   const menuBtnRefs = useRef({});
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const statusUpdateInFlightRef = useRef(false);
+  const deleteInFlightRef = useRef(false);
+  const [deletingBookingId, setDeletingBookingId] = useState(null);
 
   useEffect(() => {
     fetchBookings();
@@ -57,6 +69,12 @@ export default function AdminManageBookings() {
           'Authorization': `Bearer ${token}`
         }
       });
+      
+      if (res.status === 401) {
+        handleAuthFailure();
+        return;
+      }
+
       const data = await res.json();
       
       if (!res.ok) {
@@ -205,6 +223,12 @@ export default function AdminManageBookings() {
         },
         body: JSON.stringify({ status: newStatus })
       });
+      
+      if (res.status === 401) {
+        handleAuthFailure();
+        return;
+      }
+
       const data = await res.json();
       
       if (!res.ok) {
@@ -226,6 +250,10 @@ export default function AdminManageBookings() {
     const confirmDelete = window.confirm("Permanently delete this rejected booking?");
     if (!confirmDelete) return;
 
+    if (deleteInFlightRef.current) return;
+    deleteInFlightRef.current = true;
+    setDeletingBookingId(bookingId);
+
     try {
       const token = localStorage.getItem('vehiclecare_admin_token') || sessionStorage.getItem('vehiclecare_admin_token');
       if (!token) {
@@ -239,6 +267,12 @@ export default function AdminManageBookings() {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      if (res.status === 401) {
+        handleAuthFailure();
+        return;
+      }
+
       const data = await res.json();
       
       if (!res.ok) {
@@ -254,6 +288,9 @@ export default function AdminManageBookings() {
     } catch (err) {
       console.error("Delete booking error:", err);
       alert("Network error. Unable to delete booking.");
+    } finally {
+      deleteInFlightRef.current = false;
+      setDeletingBookingId(null);
     }
   };
 
@@ -435,6 +472,7 @@ export default function AdminManageBookings() {
                                 e.stopPropagation();
                                 handleDeleteBooking(booking._id);
                               }}
+                              disabled={deletingBookingId === booking._id}
                             >
                               <svg fill="currentColor" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12M8 9h8v10H8V9m7.5-5l-1-1h-5l-1 1H5v2h14V4h-3.5z"/></svg>
                             </button>
