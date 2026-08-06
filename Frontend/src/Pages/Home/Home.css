@@ -64,7 +64,7 @@
 /* Explore vehicle */
 .explore-vehicle-section {
   background-color: #200130;
-  padding: 90px 24px;
+  padding: 90px 24px 20px 24px;
   text-align: center;
   width: 100%;
   box-sizing: border-box;
@@ -123,8 +123,8 @@
   align-items: center;
   /* Subtle radial gradient behind the car for a premium showroom feel */
   background: radial-gradient(circle, rgba(140, 116, 155, 0.1) 0%, transparent 60%);
-  padding: 20px 0;
-  margin-top: -10px;
+  padding: 0px 0;
+  margin-top: -100px;
 }
 
 .explore-glow {
@@ -150,11 +150,15 @@
 
 @media (max-width: 768px) {
   .explore-vehicle-section {
-    padding: 60px 20px;
+    padding: 50px 20px 10px 20px;
   }
   
   .explore-vehicle-header {
-    margin-bottom: 45px;
+    margin-bottom: 20px;
+  }
+
+  .explore-image-wrapper {
+    margin-top: -40px;
   }
 }
 
@@ -162,7 +166,7 @@
 /* Featured Services */
 .featured-services {
   background-color: #200130;
-  padding: 80px 0;
+  padding: 40px 0 80px 0;
 }
 
 .featured-services-container {

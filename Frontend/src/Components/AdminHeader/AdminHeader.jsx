@@ -22,7 +22,7 @@ function timeAgo(dateStr) {
   return `${diffDay} days ago`;
 }
 
-export default function AdminHeader({ searchPlaceholder = "Search vehicle or booking ID..." }) {
+export default function AdminHeader({ searchPlaceholder = "Search vehicle or booking ID...", searchValue, onSearchChange }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [profile, setProfile] = useState({});
@@ -290,7 +290,12 @@ export default function AdminHeader({ searchPlaceholder = "Search vehicle or boo
         </button>
         <div className="admin-header-search-bar">
           <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          <input type="text" placeholder={searchPlaceholder} />
+          <input 
+            type="text" 
+            placeholder={searchPlaceholder} 
+            value={searchValue !== undefined ? searchValue : ""}
+            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+          />
         </div>
       </div>
       

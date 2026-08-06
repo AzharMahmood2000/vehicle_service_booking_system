@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
@@ -21,6 +21,12 @@ export default function AdminServiceCategories() {
   }, [navigate]);
 
   const [categories, setCategories] = useState(mockCategories);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterVisibility, setFilterVisibility] = useState('All');
+  const [filterTag, setFilterTag] = useState('All Tags');
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const filterPanelRef = useRef(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMode, setToastMode] = useState('create');
@@ -117,6 +123,93 @@ export default function AdminServiceCategories() {
 
     fetchServiceCategories();
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (filterPanelRef.current && !filterPanelRef.current.contains(e.target)) {
+        setIsFilterPanelOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const uniqueTags = useMemo(() => {
+    const tags = categories.map(c => c.tag).filter(t => t && t.trim() !== '');
+    return Array.from(new Set(tags)).sort();
+  }, [categories]);
+
+  const filteredCategories = useMemo(() => {
+    let result = categories;
+
+    if (filterVisibility === 'Active') {
+      result = result.filter(c => c.active === true);
+    } else if (filterVisibility === 'Inactive') {
+      result = result.filter(c => c.active === false);
+    }
+
+    if (filterTag !== 'All Tags') {
+      result = result.filter(c => c.tag === filterTag);
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      result = result.filter(c => 
+        (c.title && c.title.toLowerCase().includes(query)) ||
+        (c.description && c.description.toLowerCase().includes(query)) ||
+        (c.tag && c.tag.toLowerCase().includes(query))
+      );
+    }
+
+    return result;
+  }, [categories, filterVisibility, filterTag, searchQuery]);
+
+  const handleClearFilters = () => {
+    setFilterVisibility('All');
+    setFilterTag('All Tags');
+  };
+
+  const handleExportCatalog = () => {
+    if (filteredCategories.length === 0) return;
+
+    const headers = ['Title', 'Description', 'Duration Minutes', 'Price', 'Tag', 'Status'];
+    const rows = filteredCategories.map(c => {
+      const status = c.active ? 'Active' : 'Inactive';
+      const row = [
+        c.title,
+        c.description,
+        c.duration ? c.duration.replace(/\D/g, '') : '',
+        c.price ? c.price.replace(/[^\d.]/g, '') : '',
+        c.tag,
+        status
+      ];
+      
+      return row.map(field => {
+        if (field === null || field === undefined) return '""';
+        const str = String(field);
+        if (str.includes(',') || str.includes('\\n') || str.includes('"')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      }).join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = `vehiclecare-service-catalog-${dateStr}.csv`;
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const handleToggle = async (id) => {
     if (togglingServiceIdRef.current === id) return;
@@ -559,6 +652,8 @@ export default function AdminServiceCategories() {
       <main className="categories-main-content">
         <AdminHeader
           searchPlaceholder="Search services..."
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
         />
 
         <div className="categories-scroll-area">
@@ -573,8 +668,11 @@ export default function AdminServiceCategories() {
               </p>
             </div>
 
-            <div className="header-actions">
-              <button className="action-btn-outline">
+            <div className="header-actions" style={{ position: 'relative' }}>
+              <button 
+                className="action-btn-outline"
+                onClick={() => setIsFilterPanelOpen(prev => !prev)}
+              >
                 <svg
                   fill="currentColor"
                   viewBox="0 0 24 24"
@@ -584,7 +682,63 @@ export default function AdminServiceCategories() {
                 Filters
               </button>
 
-              <button className="action-btn-outline">
+              {isFilterPanelOpen && (
+                <div 
+                  ref={filterPanelRef}
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: '150px',
+                    marginTop: '8px',
+                    backgroundColor: '#1E1424',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    zIndex: 200,
+                    minWidth: '200px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+                  }}
+                >
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#A89CAE', marginBottom: '4px' }}>Visibility</label>
+                    <select 
+                      value={filterVisibility} 
+                      onChange={(e) => setFilterVisibility(e.target.value)}
+                      style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: '#0B0410', color: '#FFF', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      <option value="All">All</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#A89CAE', marginBottom: '4px' }}>Tag</label>
+                    <select 
+                      value={filterTag} 
+                      onChange={(e) => setFilterTag(e.target.value)}
+                      style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: '#0B0410', color: '#FFF', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      <option value="All Tags">All Tags</option>
+                      {uniqueTags.map(tag => (
+                        <option key={tag} value={tag}>{tag}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button 
+                    onClick={handleClearFilters}
+                    style={{ width: '100%', padding: '6px', backgroundColor: 'transparent', color: '#FF107A', border: '1px solid #FF107A', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              )}
+
+              <button 
+                className="action-btn-outline"
+                onClick={handleExportCatalog}
+                disabled={filteredCategories.length === 0}
+                style={{ opacity: filteredCategories.length === 0 ? 0.5 : 1 }}
+              >
                 <svg
                   fill="currentColor"
                   viewBox="0 0 24 24"
@@ -597,7 +751,15 @@ export default function AdminServiceCategories() {
           </div>
 
           <div className="categories-grid">
-            {categories.map((cat) => (
+            {filteredCategories.length === 0 && (
+              <div style={{ padding: '60px 20px', gridColumn: '1 / -1', textAlign: 'center', backgroundColor: '#1E1424', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <svg fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" style={{ width: 48, height: 48, color: '#726B7A', margin: '0 auto 16px auto' }}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <h3 style={{ color: '#FFF', marginBottom: '8px' }}>No Services Found</h3>
+                <p style={{ color: '#A89CAE', fontSize: '14px' }}>No services match your current filters or search query.</p>
+              </div>
+            )}
+            
+            {filteredCategories.map((cat) => (
               <div
                 className={`service-card ${
                   !cat.active
