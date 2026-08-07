@@ -166,7 +166,7 @@
 /* Featured Services */
 .featured-services {
   background-color: #200130;
-  padding: 40px 0 80px 0;
+  padding: 40px 0 30px 0;
 }
 
 .featured-services-container {
@@ -312,7 +312,13 @@
 /* How Booking Works */
 .how-booking-works {
   background-color: #200130;
-  padding: 100px 20px;
+  padding: 30px 20px 80px 20px;
+}
+
+@media (min-width: 768px) {
+  .how-booking-works {
+    padding-top: 60px;
+  }
 }
 
 .booking-works-container {

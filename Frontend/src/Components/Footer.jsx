@@ -1,9 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaFacebookF, FaInstagram, FaLinkedinIn } from 'react-icons/fa';
+import API_BASE_URL from '../api';
 import './Footer.css';
 
 const Footer = () => {
+  const [socials, setSocials] = useState({ facebookUrl: "", instagramUrl: "", linkedinUrl: "" });
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/settings/contact_info`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.setting && data.setting.value) {
+          setSocials({
+            facebookUrl: data.setting.value.facebookUrl || "",
+            instagramUrl: data.setting.value.instagramUrl || "",
+            linkedinUrl: data.setting.value.linkedinUrl || ""
+          });
+        }
+      })
+      .catch(() => { /* Silent fail */ });
+  }, []);
+
+  const isValidUrl = (url) => typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'));
+  const hasFb = isValidUrl(socials.facebookUrl);
+  const hasIg = isValidUrl(socials.instagramUrl);
+  const hasIn = isValidUrl(socials.linkedinUrl);
+
+  const disabledStyle = { opacity: 0.5, cursor: 'not-allowed' };
+
   return (
     <footer className="footer-section">
       <div className="footer-container">
@@ -35,15 +60,35 @@ const Footer = () => {
         <div className="footer-column">
           <h4 className="footer-heading">CONNECT</h4>
           <div className="footer-socials">
-            <a href="#" target="_blank" rel="noopener noreferrer" className="footer-social-icon" aria-label="Facebook">
-              <FaFacebookF aria-hidden="true" />
-            </a>
-            <a href="#" target="_blank" rel="noopener noreferrer" className="footer-social-icon" aria-label="Instagram">
-              <FaInstagram aria-hidden="true" />
-            </a>
-            <a href="#" target="_blank" rel="noopener noreferrer" className="footer-social-icon" aria-label="LinkedIn">
-              <FaLinkedinIn aria-hidden="true" />
-            </a>
+            {hasFb ? (
+              <a href={socials.facebookUrl} target="_blank" rel="noopener noreferrer" className="footer-social-icon" aria-label="Facebook">
+                <FaFacebookF aria-hidden="true" />
+              </a>
+            ) : (
+              <span className="footer-social-icon" style={disabledStyle} aria-label="Facebook" aria-disabled="true">
+                <FaFacebookF aria-hidden="true" />
+              </span>
+            )}
+            
+            {hasIg ? (
+              <a href={socials.instagramUrl} target="_blank" rel="noopener noreferrer" className="footer-social-icon" aria-label="Instagram">
+                <FaInstagram aria-hidden="true" />
+              </a>
+            ) : (
+              <span className="footer-social-icon" style={disabledStyle} aria-label="Instagram" aria-disabled="true">
+                <FaInstagram aria-hidden="true" />
+              </span>
+            )}
+            
+            {hasIn ? (
+              <a href={socials.linkedinUrl} target="_blank" rel="noopener noreferrer" className="footer-social-icon" aria-label="LinkedIn">
+                <FaLinkedinIn aria-hidden="true" />
+              </a>
+            ) : (
+              <span className="footer-social-icon" style={disabledStyle} aria-label="LinkedIn" aria-disabled="true">
+                <FaLinkedinIn aria-hidden="true" />
+              </span>
+            )}
           </div>
         </div>
         
@@ -51,9 +96,7 @@ const Footer = () => {
         <div className="footer-column">
           <h4 className="footer-heading">POLICIES</h4>
           <ul className="footer-links">
-            <li><Link to="/privacy-policy" className="footer-link">Privacy Policy</Link></li>
-            <li><Link to="/terms-of-service" className="footer-link">Terms of Service</Link></li>
-            <li><Link to="/contact" className="footer-link">Contact Us</Link></li>
+            <li><a href="/#contact" className="footer-link">Contact Us</a></li>
           </ul>
         </div>
         

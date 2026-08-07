@@ -78,15 +78,15 @@ const bookingSteps = [
   },
   {
     id: 2,
-    title: 'ENTER YOUR DETAILS',
-    description: 'Tell us about your vehicle and provide your contact information.',
-    icon: '👤'
-  },
-  {
-    id: 3,
     title: 'SELECT DATE & TIME',
     description: 'Pick a convenient date and time that fits seamlessly into your schedule.',
     icon: '📅'
+  },
+  {
+    id: 3,
+    title: 'ENTER YOUR DETAILS',
+    description: 'Tell us about your vehicle and provide your contact information.',
+    icon: '👤'
   },
   {
     id: 4,
@@ -327,7 +327,7 @@ const Home = () => {
         </section>
 
         {/* Get in touch */}
-        <section className="get-in-touch-section">
+        <section id="contact" className="get-in-touch-section">
           <div className="get-in-touch-container">
             
             {/* Contact form */}

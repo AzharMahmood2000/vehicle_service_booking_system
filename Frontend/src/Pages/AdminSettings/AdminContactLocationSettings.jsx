@@ -8,7 +8,10 @@ const defaultContactData = {
   phone: "078-7898098",
   email: "support@vehiclecare.com",
   mapEmbedUrl: "",
-  directionsUrl: ""
+  directionsUrl: "",
+  facebookUrl: "",
+  instagramUrl: "",
+  linkedinUrl: ""
 };
 
 export default function AdminContactLocationSettings() {
@@ -52,7 +55,10 @@ export default function AdminContactLocationSettings() {
             phone: loadedData.phone || defaultContactData.phone,
             email: loadedData.email || defaultContactData.email,
             mapEmbedUrl: loadedData.mapEmbedUrl || defaultContactData.mapEmbedUrl,
-            directionsUrl: loadedData.directionsUrl || defaultContactData.directionsUrl
+            directionsUrl: loadedData.directionsUrl || defaultContactData.directionsUrl,
+            facebookUrl: loadedData.facebookUrl || defaultContactData.facebookUrl,
+            instagramUrl: loadedData.instagramUrl || defaultContactData.instagramUrl,
+            linkedinUrl: loadedData.linkedinUrl || defaultContactData.linkedinUrl
           });
         } else {
           // Empty initial UI fallback (do not forcefully write to NY default values automatically)
@@ -62,7 +68,10 @@ export default function AdminContactLocationSettings() {
             phone: "",
             email: "",
             mapEmbedUrl: "",
-            directionsUrl: ""
+            directionsUrl: "",
+            facebookUrl: "",
+            instagramUrl: "",
+            linkedinUrl: ""
           });
         }
       } catch (e) {
@@ -265,6 +274,46 @@ export default function AdminContactLocationSettings() {
           ) : (
             <p style={{color: '#A89CAE', fontSize: '14px'}}>Unable to preview this map.</p>
           )}
+        </div>
+      </div>
+
+      {/* 3. SOCIAL MEDIA LINKS */}
+      <div className="manage-section-card">
+        <h3>Social Media Links</h3>
+        <div className="settings-form-grid cols-1">
+          <div className="settings-form-group">
+            <label>FACEBOOK URL</label>
+            <input 
+              type="url" 
+              name="facebookUrl" 
+              value={formData.facebookUrl} 
+              onChange={handleChange} 
+              placeholder="https://facebook.com/your-page"
+              disabled={isSubmitting}
+            />
+          </div>
+          <div className="settings-form-group">
+            <label>INSTAGRAM URL</label>
+            <input 
+              type="url" 
+              name="instagramUrl" 
+              value={formData.instagramUrl} 
+              onChange={handleChange} 
+              placeholder="https://instagram.com/your-page"
+              disabled={isSubmitting}
+            />
+          </div>
+          <div className="settings-form-group">
+            <label>LINKEDIN URL</label>
+            <input 
+              type="url" 
+              name="linkedinUrl" 
+              value={formData.linkedinUrl} 
+              onChange={handleChange} 
+              placeholder="https://linkedin.com/company/your-page"
+              disabled={isSubmitting}
+            />
+          </div>
         </div>
       </div>
 

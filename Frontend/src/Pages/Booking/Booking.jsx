@@ -5,7 +5,7 @@ import Footer from '../../Components/Footer';
 import API_BASE_URL from '../../api';
 import './Booking.css';
 
-/* ───────── Display-only time formatter ───────── */
+// Format time for display
 function formatTime12h(time24) {
   if (!time24) return '';
   const [hStr, mStr] = time24.split(':');
@@ -16,7 +16,7 @@ function formatTime12h(time24) {
   return `${h}:${mStr} ${suffix}`;
 }
 
-/* ───────── Duration label formatter ───────── */
+// Format duration label
 function formatDuration(mins) {
   if (!mins) return '';
   const hours = Math.floor(mins / 60);
@@ -32,17 +32,14 @@ export default function Booking() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  /* ── Service list from backend ── */
   const [services, setServices] = useState([]);
   const [servicesLoading, setServicesLoading] = useState(true);
   const [servicesError, setServicesError] = useState('');
 
-  /* ── Availability from backend ── */
   const [availableSlots, setAvailableSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsMessage, setSlotsMessage] = useState('');
 
-  /* ── Form state ── */
   const [formData, setFormData] = useState({
     serviceType: '',
     preferredDate: '',
@@ -62,9 +59,7 @@ export default function Booking() {
   const part2Ref = React.useRef(null);
   const part1Ref = React.useRef(null);
 
-  /* ═══════════════════════════════════════════════
-     1. Fetch active services on mount
-     ═══════════════════════════════════════════════ */
+  // Fetch active services
   useEffect(() => {
     const fetchServices = async () => {
       try {
@@ -80,7 +75,7 @@ export default function Booking() {
 
         setServices(data.services);
 
-        /* Pre-select if arriving from Services page "Book Now" */
+        // Pre-select service if passed from navigation state
         const incoming = location.state?.selectedService;
         if (incoming) {
           const matchId = incoming.id || incoming._id;
@@ -109,9 +104,7 @@ export default function Booking() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ═══════════════════════════════════════════════
-     2. Fetch availability when service + date change
-     ═══════════════════════════════════════════════ */
+  // Refresh availability on selection change
   useEffect(() => {
     if (!formData.serviceType || !formData.preferredDate) {
       setAvailableSlots([]);
@@ -168,9 +161,6 @@ export default function Booking() {
     return () => abortController.abort();
   }, [formData.serviceType, formData.preferredDate]);
 
-  /* ═══════════════════════════════════════════════
-     Handlers
-     ═══════════════════════════════════════════════ */
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -202,9 +192,7 @@ export default function Booking() {
     }, 100);
   };
 
-  /* ═══════════════════════════════════════════════
-     3. Submit booking to POST /api/bookings
-     ═══════════════════════════════════════════════ */
+  // Submit booking
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -245,7 +233,7 @@ export default function Booking() {
         setFormData((prev) => ({ ...prev, preferredTime: '', endTime: '' }));
         setShowBookingForm(false);
 
-        /* Refresh availability so user sees updated slots */
+        // Refresh availability on conflict
         const refreshRes = await fetch(
           `${API_BASE_URL}/availability/slots?date=${formData.preferredDate}&serviceId=${formData.serviceType}`
         );
@@ -274,9 +262,6 @@ export default function Booking() {
     }
   };
 
-  /* ═══════════════════════════════════════════════
-     Derived values
-     ═══════════════════════════════════════════════ */
   const selectedService = services.find((s) => s._id === formData.serviceType);
   const durationLabel = selectedService ? formatDuration(selectedService.durationMins) : '';
 
@@ -287,9 +272,6 @@ export default function Booking() {
     availableSlots.length === 0 &&
     slotsMessage;
 
-  /* ═══════════════════════════════════════════════
-     Render
-     ═══════════════════════════════════════════════ */
   return (
     <div className="booking-page">
       <Navbar />
@@ -303,7 +285,6 @@ export default function Booking() {
 
         <div className="booking-card">
 
-          {/* PART 1: CHECK AVAILABILITY */}
           <div className="booking-step" ref={part1Ref} style={{ display: showBookingForm ? 'none' : 'block' }}>
             <div className="step-header">
               <h2 className="step-title">Part 1: Check Service Availability</h2>
@@ -411,7 +392,6 @@ export default function Booking() {
             </div>
           </div>
 
-          {/* PART 2: BOOK YOUR SERVICE */}
           <div className="booking-step" ref={part2Ref} style={{ display: showBookingForm ? 'block' : 'none' }}>
             <div className="step-header">
                <button type="button" className="btn-change-selection" onClick={handleChangeSelection}>

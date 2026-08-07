@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './Pages/Home/Home';
 import Booking from './Pages/Booking/Booking';
 import BookingSuccess from './Pages/BookingSuccess/BookingSuccess';
@@ -37,6 +37,7 @@ function App() {
         <Route path="/admin/categories" element={<AdminServiceCategories />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
         <Route path="/admin/profile" element={<AdminProfile />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

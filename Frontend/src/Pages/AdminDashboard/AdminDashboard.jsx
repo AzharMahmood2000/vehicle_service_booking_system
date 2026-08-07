@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../Components/AdminSidebar/AdminSidebar';
 import AdminHeader from '../../Components/AdminHeader/AdminHeader';
-// Important: do NOT use bookingStorage for local data
 import API_BASE_URL from '../../api';
 import './AdminDashboard.css';
 
@@ -273,7 +272,7 @@ export default function AdminDashboard() {
           </div>
 
           <div className="dashboard-bottom-grid">
-            {/* Live Workshop View mapped to truthful operational metrics */}
+          
             <div className="live-workshop-card">
               <div className="workshop-header">
                 <h3>Live<br/>Workshop<br/>View</h3>
@@ -291,7 +290,6 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Hiding the fake efficiency analytics and replacing with an empty flex placeholder to preserve layout if 3-column grid is required, or replacing with real metrics if desired. Let's just repurpose the card to display booking flow. */}
             <div className="efficiency-card">
               <div className="eff-block">
                 <div className="eff-title">Completion Rate</div>
@@ -343,7 +341,6 @@ export default function AdminDashboard() {
                   })
                 )}
               </div>
-              {/* Removed fake static workshop chart entirely since backend does not provide workshop hourly load data */}
             </div>
           </div>
           </>

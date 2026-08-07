@@ -76,7 +76,6 @@ export default function AdminProfile() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsEditing(false);
-    // Ideally we would send an update request to the backend.
     setProfile({ ...profile, ...formData });
     setToastMessage("Profile updated successfully (local simulation)");
     setTimeout(() => setToastMessage(''), 3000);

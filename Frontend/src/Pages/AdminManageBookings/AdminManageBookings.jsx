@@ -149,7 +149,7 @@ export default function AdminManageBookings() {
       const dropdownHeight = 280; // approximate max height of 6 items
       const gap = 8; // gap between button and dropdown
 
-      // Primary: open to the LEFT of the button, vertically centered
+      // Try the left side first
       const spaceLeft = rect.left;
       const spaceRight = window.innerWidth - rect.right;
       const spaceBelow = window.innerHeight - rect.bottom;
@@ -513,7 +513,7 @@ export default function AdminManageBookings() {
               </table>
             </div>
 
-            {/* Portal-style fixed dropdown rendered outside the table */}
+            {/* Render the dropdown outside the table */}
             {openStatusMenu && (() => {
               const booking = bookings.find(b => b._id === openStatusMenu);
               if (!booking) return null;
@@ -527,7 +527,7 @@ export default function AdminManageBookings() {
                     zIndex: 99999,
                   }}
                 >
-                  {/* Caret arrow pointing toward the three-dot button */}
+                  {/* Point the caret at the menu button */}
                   <div
                     className={`dropdown-caret caret-${dropdownPos.placement}`}
                     style={(

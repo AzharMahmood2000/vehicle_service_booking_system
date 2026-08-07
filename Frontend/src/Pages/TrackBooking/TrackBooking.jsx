@@ -47,7 +47,6 @@ export default function TrackBooking() {
       }
 
       if (data.bookings && data.bookings.length > 0) {
-        // Phone tracking is now secured natively by backend
         const foundBooking = data.bookings[0];
 
         if (foundBooking) {
@@ -84,7 +83,6 @@ export default function TrackBooking() {
               break;
           }
 
-          // Format Date
           let formattedDate = foundBooking.appointmentDate;
           if (formattedDate) {
             const dateObj = new Date(formattedDate.includes('T') ? formattedDate.split('T')[0] : formattedDate);
@@ -93,17 +91,14 @@ export default function TrackBooking() {
             }
           }
 
-          // Format Time
           let formattedTime = foundBooking.startTime;
           if (foundBooking.endTime) {
             formattedTime = `${foundBooking.startTime} - ${foundBooking.endTime}`;
           }
 
-          // Format Service & Vehicle
           const serviceName = foundBooking.serviceId?.title || foundBooking.serviceName || 'Standard Service';
           const vehicleLabel = foundBooking.vehicleNumber || foundBooking.numberPlate || 'Vehicle';
 
-          // Show Bay if approved, in-progress, or completed
           let displayBay = null;
           if (['APPROVED', 'IN PROGRESS', 'COMPLETED'].includes(bkStatus)) {
             displayBay = foundBooking.serviceBay?.name;
